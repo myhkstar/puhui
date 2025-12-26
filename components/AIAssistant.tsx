@@ -170,11 +170,13 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
             // If new session, NOW we set the ID, triggering loadMessages (which will now find the user msg in DB)
             if (isNew) {
                 setCurrentSessionId(sessionId);
-                // Generate a title based on the first message
-                generateTitleForText(userMsg).then(newTitle => {
-                    userService.updateChatSessionTitle(sessionId!, newTitle);
-                    setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title: newTitle } : s));
-                });
+                if (currentUser?.token) {
+                    // Generate a title based on the first message
+                    generateTitleForText(userMsg, currentUser.token).then(newTitle => {
+                        userService.updateChatSessionTitle(sessionId!, newTitle);
+                        setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title: newTitle } : s));
+                    });
+                }
             }
 
             // Call AI
@@ -185,10 +187,12 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
             }));
             
             const modelName = chatMode === 'light' ? 'gemini-2.5-flash' : 'gemini-3-pro';
+            if (!currentUser?.token) throw new Error("Authentication token is missing.");
             const aiResponse = await chatWithGemini(
                 context, 
                 promptText, 
                 modelName,
+                currentUser.token,
                 currentAttachments
             );
 

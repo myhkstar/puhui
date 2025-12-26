@@ -157,7 +157,8 @@ const App: React.FC = () => {
 
     try {
       // Step 1: Research
-      const researchResult = await researchTopicForPrompt(topic, complexityLevel, visualStyle, language, aspectRatio);
+      if (!currentUser?.token) throw new Error("Authentication token is missing.");
+      const researchResult = await researchTopicForPrompt(topic, complexityLevel, visualStyle, language, aspectRatio, currentUser.token);
       let totalTokens = researchResult.usage || 0;
       
       setLoadingFacts(researchResult.facts);
@@ -167,7 +168,8 @@ const App: React.FC = () => {
       setLoadingMessage(`正在設計資訊圖表...`);
       
       // Step 2: Generation
-      const genResult = await generateInfographicImage(researchResult.imagePrompt, aspectRatio);
+      if (!currentUser?.token) throw new Error("Authentication token is missing.");
+      const genResult = await generateInfographicImage(researchResult.imagePrompt, aspectRatio, currentUser.token);
       totalTokens += genResult.usage;
       
       const newImage: GeneratedImage = {
@@ -219,7 +221,8 @@ const App: React.FC = () => {
     setLoadingMessage(`正在處理修改： "${editPrompt}"...`);
 
     try {
-      const editResult = await editInfographicImage(currentImage.data, editPrompt);
+      if (!currentUser?.token) throw new Error("User not authenticated for editing");
+      const editResult = await editInfographicImage(currentImage.data, editPrompt, currentUser.token);
       const newImage: GeneratedImage = {
         id: Date.now().toString(),
         data: editResult.content,

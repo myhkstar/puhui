@@ -48,7 +48,8 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ user, onUpdateUser }) =
         setResultImage(null);
 
         try {
-            const result = await generateSimpleImage(prompt, uploadedImages);
+            if (!user?.token) throw new Error("User not authenticated");
+            const result = await generateSimpleImage(prompt, uploadedImages, user.token);
             setResultImage(result.content);
             
             const usageResult = await userService.logUsage('圖片生成', result.usage);

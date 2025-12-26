@@ -54,6 +54,7 @@ export interface User {
   isApproved: boolean;   // Admin approval status
   expirationDate?: number; // Timestamp for account expiration
   tokens?: number;
+  token?: string; // Auth token from login
 }
 
 export interface AuthState {
