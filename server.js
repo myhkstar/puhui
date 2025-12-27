@@ -1278,6 +1278,11 @@ app.post('/api/gemini/beautify-image', authenticateToken, async (req, res) => {
 
 // Serve the frontend for any non-API, non-file requests
 app.get(/^(?!\/api).*/, (req, res) => {
+    // 如果请求包含后缀（如 .js, .css），说明静态资源丢失，直接返回 404
+    if (path.extname(req.path)) {
+        res.status(404).end();
+        return;
+    }
     const indexPath = path.join(clientBuildPath, 'index.html');
     res.sendFile(indexPath, (err) => {
         if (err) {
