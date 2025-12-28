@@ -1204,7 +1204,7 @@ app.post('/api/gemini/generate-simple-image', authenticateToken, async (req, res
 
 app.post('/api/gemini/chat', authenticateToken, async (req, res) => {
   if (!genAI) return res.status(503).json({ message: 'AI service is not available.' });
-  const { history, newMessage, modelName, attachments } = req.body;
+  const { history, newMessage, modelName, attachments, isSearchEnabled } = req.body; // 接收 isSearchEnabled
   try {
     const systemInstruction = `
 你是一個溫暖、耐心、對初學者極度友好的通用型 AI 助手，名字叫「普普」。你的主要目標是讓不懂 AI 的人也能輕鬆愉快地和你聊天、解決問題，並慢慢喜歡上使用 AI。
@@ -1224,21 +1224,40 @@ app.post('/api/gemini/chat', authenticateToken, async (req, res) => {
         role: h.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: h.content }]
     }));
-    const chat = genAI.chats.create({
-        model: modelName,
-        history: formattedHistory,
-        config: { systemInstruction }
+
+    // 根据 isSearchEnabled 动态配置 tools
+    const tools = isSearchEnabled ? [{ googleSearch: {} }] : [];
+
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      tools: tools, // 注入搜索工具
+      systemInstruction: systemInstruction
     });
+
+    const chat = model.startChat({
+      history: formattedHistory,
+    });
+
     const parts = [{ text: newMessage }];
     if (attachments && attachments.length > 0) {
         for (const file of attachments) {
             parts.push({ inlineData: { mimeType: file.mimeType, data: file.data } });
         }
     }
-    const result = await chat.sendMessage({ message: parts });
+    const result = await chat.sendMessage({ contents: parts });
+    const response = result.response;
+
+    // 提取 groundingMetadata
+    const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+    const sources = groundingMetadata?.groundingChunks?.map(chunk => ({
+      title: chunk.web?.title || '未知来源',
+      url: chunk.web?.uri || '#'
+    })) || [];
+
     res.json({
-        content: result.text || "",
-        usage: result.usageMetadata?.totalTokenCount || 0
+        content: response.text() || "",
+        usage: result.usageMetadata?.totalTokenCount || 0,
+        sources: sources // 返回来源链接
     });
   } catch (error) {
     console.error('Gemini chat error:', error);

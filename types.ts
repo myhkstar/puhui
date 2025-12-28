@@ -69,6 +69,7 @@ export interface ChatMessage {
   role: 'user' | 'model';
   content: string;
   timestamp: number;
+  sources?: Source[]; // 添加 sources 字段
 }
 
 export interface ChatSession {
@@ -102,10 +103,16 @@ export interface SpecialAssistant {
   userId: string; // To link to the user
 }
 
+export interface Source {
+  title: string;
+  url: string;
+}
+
 // AI Service Responses
 export interface AIResponse {
     content: string;
     usage: number;
+    sources?: Source[]; // 添加 sources 字段
 }
 
 // Properly extend the Window interface for the global scope

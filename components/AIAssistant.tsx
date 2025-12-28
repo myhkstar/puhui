@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { userService } from '../services/userService';
 import { chatWithGemini, generateTitleForText } from '../services/geminiService';
-import { ChatMessage, ChatSession, User, SpecialAssistant } from '../types'; // Consolidated types
+import { ChatMessage, ChatSession, User, SpecialAssistant, Source } from '../types'; // Consolidated types, added Source
 import SpecialAssistantManager from './SpecialAssistantManager'; // New import
 import { Send, Trash2, Plus, MessageSquare, Paperclip, Loader2, Bot, User as UserIcon, Menu, Cpu, Zap, BrainCircuit, Lock, Edit2, Check, Copy, Search, Sparkles, X } from 'lucide-react';
 import { AuthContext } from '../App';
@@ -250,7 +250,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
             }
 
             // Append model response to UI
-            setMessages(prev => [...prev, { role: 'model', content: aiResponse.content, timestamp: Date.now() }]);
+            setMessages(prev => [...prev, { role: 'model', content: aiResponse.content, timestamp: Date.now(), sources: aiResponse.sources }]);
         } catch (err) {
             console.error(err);
             setMessages(prev => [...prev, { role: 'model', content: "抱歉，普普遇到了一點問題，請稍後再試試！", timestamp: Date.now() }]);
@@ -386,6 +386,25 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                                         <div className="whitespace-pre-wrap leading-relaxed text-sm">
                                             {msg.content}
                                         </div>
+                                        {msg.sources && msg.sources.length > 0 && (
+                                            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+                                                <p className="font-semibold mb-1">來源:</p>
+                                                <ul className="list-disc list-inside space-y-0.5">
+                                                    {msg.sources.map((source: Source, sourceIdx: number) => (
+                                                        <li key={sourceIdx}>
+                                                            <a 
+                                                                href={source.url} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer" 
+                                                                className="text-blue-600 dark:text-blue-400 hover:underline"
+                                                            >
+                                                                {source.title}
+                                                            </a>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="self-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => handleCopy(msg.content, messageId)} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">
