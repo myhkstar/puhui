@@ -19,6 +19,12 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
+// 添加 CSP 头
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', "script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.googleapis.com;");
+  next();
+});
+
 // --- Configuration ---
 const JWT_SECRET = process.env.JWT_SECRET || 'vision-secret-key-change-in-prod';
 const PORT = process.env.PORT || 3000;
@@ -242,6 +248,18 @@ const signToken = (user) => {
 // --- Serve Frontend in Production ---
 const clientBuildPath = path.join(__dirname, 'dist');
 app.use(express.static(clientBuildPath));
+
+// 添加一个日志中间件来调试静态文件服务
+app.use((req, res, next) => {
+  console.log(`Incoming request: ${req.method} ${req.url}`);
+  // 检查请求是否是静态文件，但未被 express.static 处理
+  // 注意：express.static 不会调用 next() 如果它找到了文件
+  // 所以如果请求到达这里，说明 express.static 没有找到文件
+  if (req.url.startsWith('/assets/') || req.url.endsWith('.js') || req.url.endsWith('.css')) {
+    console.warn(`Static file request not handled by express.static: ${req.url}`);
+  }
+  next();
+});
 
 // --- Routes ---
 

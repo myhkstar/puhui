@@ -66,7 +66,7 @@ export interface AuthState {
 
 export interface ChatMessage {
   id?: number;
-  role: 'user' | 'model';
+  role: 'user' | 'model' | 'system'; // 添加 'system' 角色
   content: string;
   timestamp: number;
   sources?: Source[]; // 添加 sources 字段
