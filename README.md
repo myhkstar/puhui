@@ -10,6 +10,8 @@ View your app in AI Studio: https://ai.studio/apps/drive/1rUMiI9sBTgH9JtkXs6mHWL
 github:  lorsso/Vision4avcf
 
 这个项目在初版时，每次重新部署都会清空数据库。
+数据库问题已经解决。
+这一版增加落地搜索。
 
 ## Run Locally
 

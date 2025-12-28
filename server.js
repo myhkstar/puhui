@@ -189,16 +189,20 @@ const initDb = async () => {
     }
 
   } catch (err) {
-    console.error('❌ FATAL: Database Connection Failed. The application cannot start.');
+    console.error('❌ Database Connection Failed during initialization.');
     console.error('   Please check your network connection and the Aiven database status.');
     console.error('   Error details:', err.message);
-    process.exit(1); // Exit the process with a failure code
+    // Re-throw the error to be caught by the caller
+    throw err;此处修改过
   } finally {
     if (connection) connection.release();
   }
 };
 
-initDb();
+// Initialize DB but don't crash the server if it fails on startup.
+initDb().catch(err => {
+    console.error('⚠️ Database initialization failed, but continuing to start server:', err.message);
+});此处修改过
 
 // --- Middleware ---
 const authenticateToken = (req, res, next) => {
