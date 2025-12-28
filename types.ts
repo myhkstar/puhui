@@ -13,7 +13,7 @@ export type Language = 'English' | 'Spanish' | 'French' | 'German' | 'Mandarin' 
 
 export interface GeneratedImage {
   id: string;
-  data: string; // Base64 data URL or R2 signed URL
+  data: string; // Base64 data URL or R2 signed URL；
   prompt: string;
   timestamp: number;
   level?: ComplexityLevel;

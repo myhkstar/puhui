@@ -409,7 +409,7 @@ const App: React.FC = () => {
                   <NavButton icon={GraduationCap} label="中學生AI" view="student-ai" />
                   <NavButton icon={FileText} label="智能工具" view="smart-tools" />
                   <NavButton icon={BarChart} label="可視化引擎" view="home" />
-                  <NavButton icon={MessageSquare} label="AI助手" view="ai-assistant" />
+                  <NavButton icon={MessageSquare} label="深聊淺談" view="ai-assistant" />
               </div>
 
               {currentUser ? (
@@ -466,7 +466,7 @@ const App: React.FC = () => {
              <NavButton icon={GraduationCap} label="中學生" view="student-ai" />
              <NavButton icon={FileText} label="工具" view="smart-tools" />
              <NavButton icon={BarChart} label="可視化" view="home" />
-             <NavButton icon={MessageSquare} label="AI助手" view="ai-assistant" />
+             <NavButton icon={MessageSquare} label="深聊淺談" view="ai-assistant" />
         </div>
       </header>
 

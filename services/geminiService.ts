@@ -4,7 +4,7 @@
 */
 import { AspectRatio, ComplexityLevel, VisualStyle, ResearchResult, AIResponse, Language } from "../types";
 
-// Helper function to handle API requests to our own backend
+// Helper function to handle API requests to our own backend.
 const apiRequest = async (endpoint: string, body: any, token: string): Promise<any> => {
   const response = await fetch(`/api/gemini/${endpoint}`, {
     method: 'POST',
@@ -55,9 +55,11 @@ export const chatWithGemini = async (
     newMessage: string,
     modelName: string,
     token: string,
+    thinkingLevel: string,
+    isSearchEnabled: boolean, // Add isSearchEnabled parameter
     attachments?: { mimeType: string, data: string }[]
 ): Promise<AIResponse> => {
-    return apiRequest('chat', { history, newMessage, modelName, attachments }, token);
+    return apiRequest('chat', { history, newMessage, modelName, thinkingLevel, isSearchEnabled, attachments }, token);
 };
 
 export const generateTitleForText = async (text: string, token: string): Promise<string> => {

@@ -352,3 +352,4 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
 };
 
 export default UserDashboard;
+

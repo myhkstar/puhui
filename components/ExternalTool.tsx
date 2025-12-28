@@ -32,13 +32,13 @@ const SmartTools: React.FC<SmartToolsProps> = ({ user, onUpdateUser }) => {
             case 'AIStylist':
                 return <AIStylist />;
             case 'PDFTool':
-                return <Placeholder title="PDF处理" />;
+                return <Placeholder title="PDF處理" />;
             case 'PPTGenerator':
                 return <Placeholder title="PPT初稿" />;
             case 'AudioTranscription':
-                return <Placeholder title="录音整理" />;
+                return <Placeholder title="錄音整理" />;
             case 'MeetingNotes':
-                return <Placeholder title="会议记录" />;
+                return <Placeholder title="會議記錄" />;
             default:
                 return <HDImageGenerator user={user} onUpdateUser={onUpdateUser} />;
         }

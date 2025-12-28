@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-# 执行 package.json 中的 build 脚本 (tsc && vite build)
+# 执行package.json 中的 build 脚本 (tsc && vite build)
 RUN npm run build 
 
 # --- 阶段 2: 运行后端 ---

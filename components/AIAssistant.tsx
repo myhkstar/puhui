@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { userService } from '../services/userService';
 import { chatWithGemini, generateTitleForText } from '../services/geminiService';
 import { ChatMessage, ChatSession, User } from '../types';
-import { Send, Trash2, Plus, MessageSquare, Paperclip, Loader2, Bot, User as UserIcon, Menu, Cpu, Zap, BrainCircuit, Lock, Edit2, Check, Copy } from 'lucide-react';
+import { Send, Trash2, Plus, MessageSquare, Paperclip, Loader2, Bot, User as UserIcon, Menu, Cpu, Zap, BrainCircuit, Lock, Edit2, Check, Copy, Search } from 'lucide-react';
 import { AuthContext } from '../App';
 
 interface AIAssistantProps {
@@ -21,6 +21,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
     const [loading, setLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [chatMode, setChatMode] = useState<'light' | 'deep'>('light');
+    const [isSearchEnabled, setIsSearchEnabled] = useState(false); // New state for search
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -34,7 +35,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
     useEffect(() => {
         loadSessions();
         // Log usage on mount (without tokens, just access log)
-        userService.logUsage('深聊浅谈', 0);
+        userService.logUsage('深聊淺談', 0);
     }, []);
 
     useEffect(() => {
@@ -96,7 +97,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                 return;
             }
 
-            files.forEach(file => {
+            files.forEach((file: File) => { // Explicitly cast file to File
                 const reader = new FileReader();
                 reader.onload = () => {
                     const base64 = reader.result as string;
@@ -194,18 +195,21 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                 content: m.content
             }));
             
-            const modelName = chatMode === 'light' ? 'gemini-2.5-flash' : 'gemini-3-pro';
+            const modelName = chatMode === 'light' ? 'gemini-2.5-flash' : 'gemini-3-flash-preview';
+            const thinkingLevel = chatMode === 'light' ? 'auto' : 'high'; // Add thinking level
             if (!currentUser?.token) throw new Error("Authentication token is missing.");
             const aiResponse = await chatWithGemini(
                 context, 
                 promptText, 
                 modelName,
                 currentUser.token,
+                thinkingLevel, // Pass thinking level
+                isSearchEnabled, // Pass search enabled state
                 currentAttachments
             );
 
             await userService.saveChatMessage(sessionId, 'model', aiResponse.content);
-            const usageResult = await userService.logUsage('深聊浅谈', aiResponse.usage);
+            const usageResult = await userService.logUsage('深聊淺談', aiResponse.usage);
             if (usageResult.remainingTokens !== undefined) {
                 updateCurrentUser({ tokens: usageResult.remainingTokens });
             }
@@ -282,7 +286,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                             <Menu className="w-5 h-5 text-slate-500" />
                         </button>
                         <span className="font-bold text-slate-700 dark:text-slate-200 truncate">
-                            {sessions.find(s => s.id === currentSessionId)?.title || "深聊浅谈 - 普普"}
+                            {sessions.find(s => s.id === currentSessionId)?.title || "深聊淺談 - 普普"}
                         </span>
                     </div>
 
@@ -304,6 +308,13 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                             {chatMode !== 'deep' && currentUser?.role !== 'user' && <BrainCircuit className="w-3 h-3" />}
                             {chatMode === 'deep' && <BrainCircuit className="w-3 h-3" />}
                             深研
+                        </button>
+                        <button
+                            onClick={() => setIsSearchEnabled(!isSearchEnabled)}
+                            className={`px-3 py-1 text-xs font-bold rounded-md flex items-center gap-1.5 transition-colors ${isSearchEnabled ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
+                            title="結合谷歌搜索"
+                        >
+                            <Search className="w-3 h-3" /> 搜索
                         </button>
                     </div>
                 </div>

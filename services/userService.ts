@@ -15,7 +15,7 @@ const getHeaders = () => {
 };
 
 export const userService = {
-    // 監聽登入狀態 (Simulation using checkSession)
+    // 監聽登入狀態 (Simulation using checkSession)：
     onAuthStateChanged: (callback: (user: User | null) => void) => {
         // Immediate check
         userService.checkSession().then(callback);
