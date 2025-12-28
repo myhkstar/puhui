@@ -21,7 +21,7 @@ app.use(cors());
 
 // 添加 CSP 头
 app.use((req, res, next) => {
-  res.setHeader('Content-Security-Policy', "script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.googleapis.com;");
+  res.setHeader('Content-Security-Policy', "script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com;");
   next();
 });
 
@@ -248,6 +248,7 @@ const signToken = (user) => {
 // --- Serve Frontend in Production ---
 const clientBuildPath = path.join(__dirname, 'dist');
 app.use(express.static(clientBuildPath));
+app.use('/assets', express.static(path.join(clientBuildPath, 'assets'))); // 明确服务 assets 目录
 
 // 添加一个日志中间件来调试静态文件服务
 app.use((req, res, next) => {
