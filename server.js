@@ -166,6 +166,24 @@ const initDb = async () => {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    // 6. Create Special Assistants Table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS special_assistants (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id INT,
+        name VARCHAR(255) NOT NULL,
+        role TEXT NOT NULL,
+        personality TEXT,
+        tone TEXT,
+        task TEXT NOT NULL,
+        steps TEXT NOT NULL,
+        format TEXT,
+        created_at BIGINT,
+        updated_at BIGINT,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
     
     // Add tokens column if it doesn't exist (for migration)
     try {
@@ -1276,6 +1294,110 @@ app.post('/api/gemini/beautify-image', authenticateToken, async (req, res) => {
         console.error('Gemini image beautify error:', error);
         res.status(500).json({ message: 'An error occurred during image beautification.' });
     }
+});
+
+// Special Assistants: Get All for User
+app.get('/api/special-assistants', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM special_assistants WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
+    res.json(rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      role: row.role,
+      personality: row.personality,
+      tone: row.tone,
+      task: row.task,
+      steps: row.steps,
+      format: row.format,
+      createdAt: parseInt(row.created_at),
+      updatedAt: parseInt(row.updated_at),
+    })));
+  } catch (err) {
+    console.error('Failed to fetch special assistants:', err);
+    res.status(500).json({ message: `Failed to fetch special assistants: ${err.message}` });
+  }
+});
+
+// Special Assistants: Create New
+app.post('/api/special-assistants', authenticateToken, async (req, res) => {
+  const { name, role, personality, tone, task, steps, format } = req.body;
+  const id = `sa_${Date.now()}_${req.user.id}`; // Simple unique ID
+  const createdAt = Date.now();
+  const updatedAt = Date.now();
+
+  try {
+    await pool.query(`
+      INSERT INTO special_assistants (id, user_id, name, role, personality, tone, task, steps, format, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id, req.user.id, name, role, personality, tone, task, steps, format, createdAt, updatedAt]);
+
+    res.status(201).json({
+      id,
+      name,
+      role,
+      personality,
+      tone,
+      task,
+      steps,
+      format,
+      createdAt,
+      updatedAt,
+    });
+  } catch (err) {
+    console.error('Failed to create special assistant:', err);
+    res.status(500).json({ message: `Failed to create special assistant: ${err.message}` });
+  }
+});
+
+// Special Assistants: Update Existing
+app.put('/api/special-assistants/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { name, role, personality, tone, task, steps, format } = req.body;
+  const updatedAt = Date.now();
+
+  try {
+    const [result] = await pool.query(`
+      UPDATE special_assistants
+      SET name = ?, role = ?, personality = ?, tone = ?, task = ?, steps = ?, format = ?, updated_at = ?
+      WHERE id = ? AND user_id = ?
+    `, [name, role, personality, tone, task, steps, format, updatedAt, id, req.user.id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Special assistant not found or unauthorized' });
+    }
+
+    res.json({
+      id,
+      name,
+      role,
+      personality,
+      tone,
+      task,
+      steps,
+      format,
+      updatedAt,
+    });
+  } catch (err) {
+    console.error('Failed to update special assistant:', err);
+    res.status(500).json({ message: `Failed to update special assistant: ${err.message}` });
+  }
+});
+
+// Special Assistants: Delete
+app.delete('/api/special-assistants/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [result] = await pool.query('DELETE FROM special_assistants WHERE id = ? AND user_id = ?', [id, req.user.id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Special assistant not found or unauthorized' });
+    }
+
+    res.json({ success: true, message: 'Special assistant deleted successfully' });
+  } catch (err) {
+    console.error('Failed to delete special assistant:', err);
+    res.status(500).json({ message: `Failed to delete special assistant: ${err.message}` });
+  }
 });
 
 // Serve the frontend for any non-API, non-file requests

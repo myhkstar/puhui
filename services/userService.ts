@@ -44,7 +44,8 @@ export const userService = {
                     console.warn("Could not fetch history", e);
                 }
 
-                return { ...userData, history };
+                // Explicitly add the token from localStorage to the returned user object
+                return { ...userData, history, token };
             } else {
                 localStorage.removeItem('vision_token');
                 return null;
@@ -68,8 +69,10 @@ export const userService = {
             throw new Error(data.message || 'Login failed');
         }
 
+        let token = null;
         if (data.token) {
             localStorage.setItem('vision_token', data.token);
+            token = data.token; // Capture the token
         }
 
         // Fetch history
@@ -79,7 +82,8 @@ export const userService = {
             if (histRes.ok) history = await histRes.json();
         } catch (e) {}
 
-        return { ...data, history };
+        // Explicitly add the token to the returned user object
+        return { ...data, history, token };
     },
 
     register: async (
