@@ -18,12 +18,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // --- Serve Frontend in Production ---
-const clientBuildPath = path.join(__dirname, 'dist');
-app.use(express.static(clientBuildPath)); // 放在最前面，确保静态文件优先被处理
+// const clientBuildPath = path.join(__dirname, 'dist'); // 移除此行，不再需要
+
+app.use(express.static(path.join(__dirname))); // 服务 /app 目录下的所有静态文件，包括 index.html 和 dist/assets
 
 // 添加 CSP 头 (现在在 express.static 之后)
 app.use((req, res, next) => {
-  res.setHeader('Content-Security-Policy', "script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com;");
+  res.setHeader('Content-Security-Security', "script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com;");
   next();
 });
 
