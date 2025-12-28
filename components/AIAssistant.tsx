@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { userService } from '../services/userService';
 import { chatWithGemini, generateTitleForText } from '../services/geminiService';
-import { ChatMessage, ChatSession, User } from '../types';
-import { Send, Trash2, Plus, MessageSquare, Paperclip, Loader2, Bot, User as UserIcon, Menu, Cpu, Zap, BrainCircuit, Lock, Edit2, Check, Copy, Search } from 'lucide-react';
+import { ChatMessage, ChatSession, User, SpecialAssistant } from '../types'; // Consolidated types
+import SpecialAssistantManager from './SpecialAssistantManager'; // New import
+import { Send, Trash2, Plus, MessageSquare, Paperclip, Loader2, Bot, User as UserIcon, Menu, Cpu, Zap, BrainCircuit, Lock, Edit2, Check, Copy, Search, Sparkles, X } from 'lucide-react';
 import { AuthContext } from '../App';
 
 interface AIAssistantProps {
@@ -22,6 +23,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [chatMode, setChatMode] = useState<'light' | 'deep'>('light');
     const [isSearchEnabled, setIsSearchEnabled] = useState(false); // New state for search
+    const [showSpecialAssistantModal, setShowSpecialAssistantModal] = useState(false); // New state for special assistant modal
+    const [selectedSpecialAssistant, setSelectedSpecialAssistant] = useState<SpecialAssistant | null>(null); // New state for selected special assistant
+    const [userSpecialAssistants, setUserSpecialAssistants] = useState<SpecialAssistant[]>([]); // New state for user's special assistants
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -34,9 +38,12 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
 
     useEffect(() => {
         loadSessions();
+        if (currentUser) {
+            fetchUserSpecialAssistants(); // New function call
+        }
         // Log usage on mount (without tokens, just access log)
         userService.logUsage('深聊淺談', 0);
-    }, []);
+    }, [currentUser]); // Add currentUser to dependency array
 
     useEffect(() => {
         if (currentSessionId) {
@@ -84,6 +91,23 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
             if (currentSessionId === id) {
                 setCurrentSessionId(null);
             }
+        }
+    };
+
+    const fetchUserSpecialAssistants = async () => {
+        try {
+            const assistants = await userService.getSpecialAssistants();
+            setUserSpecialAssistants(assistants);
+        } catch (error) {
+            console.error("Failed to fetch user's special assistants:", error);
+        }
+    };
+
+    const handleSpecialAssistantClick = () => {
+        if (currentUser?.role === 'user') {
+            alert("您需要VIP權限才能打造自己的特別助手");
+        } else {
+            setShowSpecialAssistantModal(true);
         }
     };
 
@@ -190,10 +214,21 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
 
             // Call AI
             // We pass pure text history for context (simplified)
-            const context = messages.map(m => ({
+            let context = messages.map(m => ({
                 role: m.role,
                 content: m.content
             }));
+
+            if (selectedSpecialAssistant) {
+                const systemPrompt = `你是一個名為 "${selectedSpecialAssistant.name}" 的特別助手。` +
+                                     `你的角色是：${selectedSpecialAssistant.role}。` +
+                                     (selectedSpecialAssistant.personality ? `你的個性是：${selectedSpecialAssistant.personality}。` : '') +
+                                     (selectedSpecialAssistant.tone ? `你的語氣是：${selectedSpecialAssistant.tone}。` : '') +
+                                     `你的任務是：${selectedSpecialAssistant.task}。` +
+                                     `你的行事準則/步驟是：${selectedSpecialAssistant.steps}。` +
+                                     (selectedSpecialAssistant.format ? `你的回答格式是：${selectedSpecialAssistant.format}。` : '');
+                context = [{ role: 'system', content: systemPrompt }, ...context];
+            }
             
             const modelName = chatMode === 'light' ? 'gemini-2.5-flash' : 'gemini-3-flash-preview';
             const thinkingLevel = chatMode === 'light' ? 'auto' : 'high'; // Add thinking level
@@ -229,11 +264,18 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
             {/* Sidebar */}
             <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-slate-50 dark:bg-slate-950 transition-all duration-300 border-r border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden`}>
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-                    <button 
+                    <button
                         onClick={createNewSession}
                         className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 transition-all"
                     >
                         <Plus className="w-4 h-4" /> 新對話
+                    </button>
+                    {/* Special Assistant Button */}
+                    <button
+                        onClick={handleSpecialAssistantClick}
+                        className="w-full py-3 mt-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 transition-all"
+                    >
+                        <Sparkles className="w-4 h-4" /> 特別助手
                     </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -302,7 +344,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                             onClick={() => currentUser?.role !== 'user' && setChatMode('deep')}
                             disabled={currentUser?.role === 'user'}
                             className={`px-3 py-1 text-xs font-bold rounded-md flex items-center gap-1.5 transition-colors ${chatMode === 'deep' ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-sm' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed'}`}
-                            title={currentUser?.role === 'user' ? '此功能僅限 VIP 和管理員使用' : ''}
+                            title={currentUser?.role === 'user' ? '此功能僅限 VIP、管理員和 Thinker 使用' : ''}
                         >
                             {currentUser?.role === 'user' && <Lock className="w-3 h-3" />}
                             {chatMode !== 'deep' && currentUser?.role !== 'user' && <BrainCircuit className="w-3 h-3" />}
@@ -370,6 +412,37 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
 
                 {/* Input Area */}
                 <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+                    {selectedSpecialAssistant && (
+                        <div className="mb-2 p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg text-sm text-purple-800 dark:text-purple-200 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4" />
+                            <span>當前使用特別助手: <span className="font-bold">{selectedSpecialAssistant.name}</span></span>
+                            <button onClick={() => setSelectedSpecialAssistant(null)} className="ml-auto p-1 rounded-full hover:bg-purple-200 dark:hover:bg-purple-800 text-purple-600 dark:text-purple-400">
+                                <X className="w-3 h-3" />
+                            </button>
+                        </div>
+                    )}
+                    {userSpecialAssistants.length > 0 && (
+                        <div className="mb-2">
+                            <label htmlFor="special-assistant-select" className="sr-only">選擇特別助手</label>
+                            <select
+                                id="special-assistant-select"
+                                value={selectedSpecialAssistant?.id || ''}
+                                onChange={(e) => {
+                                    const assistantId = e.target.value;
+                                    const assistant = userSpecialAssistants.find(a => a.id === assistantId) || null;
+                                    setSelectedSpecialAssistant(assistant);
+                                }}
+                                className="block w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm p-2"
+                            >
+                                <option value="">-- 選擇特別助手 (普通對話) --</option>
+                                {userSpecialAssistants.map(assistant => (
+                                    <option key={assistant.id} value={assistant.id}>
+                                        {assistant.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                     {attachments.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-2">
                             {attachments.map((file, index) => (
@@ -404,6 +477,14 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                     </form>
                 </div>
             </div>
+
+            {showSpecialAssistantModal && (
+                <SpecialAssistantManager
+                    currentUser={currentUser}
+                    onClose={() => setShowSpecialAssistantModal(false)}
+                    onAssistantSelected={setSelectedSpecialAssistant}
+                />
+            )}
         </div>
     );
 };

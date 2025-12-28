@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { User, GeneratedImage, UserRole, ChatSession, ChatMessage, UsageLog, AdminUsageLog } from "../types";
+import { User, GeneratedImage, UserRole, ChatSession, ChatMessage, UsageLog, AdminUsageLog, SpecialAssistant } from "../types";
 
 const API_BASE = '/api';
 
@@ -226,6 +226,41 @@ export const userService = {
             headers: getHeaders(),
             body: JSON.stringify({ title })
         });
+    },
+
+    // --- Special Assistant System ---
+    createSpecialAssistant: async (assistant: Omit<SpecialAssistant, 'id' | 'userId'>) => {
+        const res = await fetch(`${API_BASE}/special-assistants`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(assistant)
+        });
+        if (!res.ok) throw new Error("Failed to create special assistant");
+        return res.json();
+    },
+
+    getSpecialAssistants: async (): Promise<SpecialAssistant[]> => {
+        const res = await fetch(`${API_BASE}/special-assistants`, { headers: getHeaders() });
+        if (res.ok) return await res.json();
+        return [];
+    },
+
+    updateSpecialAssistant: async (id: string, assistant: Partial<SpecialAssistant>) => {
+        const res = await fetch(`${API_BASE}/special-assistants/${id}`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(assistant)
+        });
+        if (!res.ok) throw new Error("Failed to update special assistant");
+        return res.json();
+    },
+
+    deleteSpecialAssistant: async (id: string) => {
+        const res = await fetch(`${API_BASE}/special-assistants/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+        if (!res.ok) throw new Error("Failed to delete special assistant");
     },
 
     // --- Admin Functions ---

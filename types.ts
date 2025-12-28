@@ -37,7 +37,7 @@ export interface ResearchResult {
 }
 
 // User System Types
-export type UserRole = 'user' | 'admin' | 'vip';
+export type UserRole = 'user' | 'admin' | 'vip' | 'thinker';
 
 export interface User {
   uid?: string; // Database ID
@@ -56,6 +56,7 @@ export interface User {
   tokens?: number;
   token?: string; // Auth token from login
   avatarUrl?: string;
+  specialAssistants?: SpecialAssistant[]; // New field for special assistants
 }
 
 export interface AuthState {
@@ -87,6 +88,18 @@ export interface AdminUsageLog {
   feature: string;
   timestamp: number;
   tokenCount?: number;
+}
+
+export interface SpecialAssistant {
+  id: string;
+  name: string;
+  role: string;
+  personality?: string;
+  tone?: string;
+  task: string;
+  steps: string;
+  format?: string;
+  userId: string; // To link to the user
 }
 
 // AI Service Responses
