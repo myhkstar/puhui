@@ -17,5 +17,9 @@ RUN npm install --only=production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./server.js
 
+# 设置环境变量
+ENV PORT=8080
+EXPOSE 8080
+
 # 启动服务器
 CMD ["node", "server.js"]
