@@ -192,17 +192,15 @@ const initDb = async () => {
     console.error('❌ Database Connection Failed during initialization.');
     console.error('   Please check your network connection and the Aiven database status.');
     console.error('   Error details:', err.message);
-    // Re-throw the error to be caught by the caller
-    throw err;此处修改过
+    // Do NOT re-throw the error, allow server to start with mock DB
+    useMockDb = true;
   } finally {
     if (connection) connection.release();
   }
 };
 
-// Initialize DB but don't crash the server if it fails on startup.
-initDb().catch(err => {
-    console.error('⚠️ Database initialization failed, but continuing to start server:', err.message);
-});此处修改过
+// Initialize DB. If it fails, switch to mock DB but allow server to start.
+await initDb();
 
 // --- Middleware ---
 const authenticateToken = (req, res, next) => {
