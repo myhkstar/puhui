@@ -16,14 +16,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
-app.use(cors());
 
-// 添加 CSP 头
+// --- Serve Frontend in Production ---
+const clientBuildPath = path.join(__dirname, 'dist');
+app.use(express.static(clientBuildPath)); // 放在最前面，确保静态文件优先被处理
+
+// 添加 CSP 头 (现在在 express.static 之后)
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com;");
   next();
 });
+
+app.use(express.json({ limit: '50mb' }));
+app.use(cors());
 
 // --- Configuration ---
 const JWT_SECRET = process.env.JWT_SECRET || 'vision-secret-key-change-in-prod';
@@ -244,11 +249,6 @@ const authenticateToken = (req, res, next) => {
 const signToken = (user) => {
   return jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 };
-
-// --- Serve Frontend in Production ---
-const clientBuildPath = path.join(__dirname, 'dist');
-app.use(express.static(clientBuildPath));
-app.use('/assets', express.static(path.join(clientBuildPath, 'assets'))); // 明确服务 assets 目录
 
 // --- Routes ---
 
