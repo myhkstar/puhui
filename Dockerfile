@@ -16,9 +16,6 @@ RUN npm install --only=production
 # 从构建阶段复制生成的 dist 文件夹和 server.js
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./server.js
-# 明确复制构建后的 index.html 到应用根目录
-COPY --from=builder /app/dist/index.html ./index.html
-
 # 设置环境变量
 ENV PORT=8080
 EXPOSE 8080
