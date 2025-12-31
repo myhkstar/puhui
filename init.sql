@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS images (
     level VARCHAR(50),
     style VARCHAR(50),
     language VARCHAR(50),
+    facts TEXT,
+    usage_count INT DEFAULT 0,
     created_at BIGINT,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

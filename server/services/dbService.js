@@ -4,13 +4,13 @@ import { pool } from '../config/db.js';
 export let useMockDb = false;
 
 export const initDb = async () => {
-    let connection;
-    try {
-        connection = await pool.getConnection();
-        console.log('✅ Connected to MySQL successfully');
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    console.log('✅ Connected to MySQL successfully');
 
-        // Users Table
-        await connection.query(`
+    // Users Table
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(255) NOT NULL UNIQUE,
@@ -27,8 +27,8 @@ export const initDb = async () => {
       )
     `);
 
-        // Images Table
-        await connection.query(`
+    // Images Table
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS images (
         id VARCHAR(255) PRIMARY KEY,
         user_id INT,
@@ -42,8 +42,8 @@ export const initDb = async () => {
       )
     `);
 
-        // Chat Tables
-        await connection.query(`
+    // Chat Tables
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS chat_sessions (
         id VARCHAR(255) PRIMARY KEY,
         user_id INT,
@@ -54,7 +54,7 @@ export const initDb = async () => {
       )
     `);
 
-        await connection.query(`
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS chat_messages (
         id INT AUTO_INCREMENT PRIMARY KEY,
         session_id VARCHAR(255),
@@ -65,8 +65,8 @@ export const initDb = async () => {
       )
     `);
 
-        // Usage Logs Table
-        await connection.query(`
+    // Usage Logs Table
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS usage_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT,
@@ -77,8 +77,8 @@ export const initDb = async () => {
       )
     `);
 
-        // Special Assistants Table
-        await connection.query(`
+    // Special Assistants Table
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS special_assistants (
         id VARCHAR(255) PRIMARY KEY,
         user_id INT,
@@ -95,32 +95,51 @@ export const initDb = async () => {
       )
     `);
 
-        // Migration: Add tokens column
-        try {
-            await connection.query('SELECT tokens FROM users LIMIT 1');
-        } catch (e) {
-            if (e.code === 'ER_BAD_FIELD_ERROR') {
-                console.log('🔧 Migrating users table: adding tokens column...');
-                await connection.query('ALTER TABLE users ADD COLUMN tokens BIGINT DEFAULT 100000');
-            }
-        }
+    // Migration: Add tokens column
+    try {
+      await connection.query('SELECT tokens FROM users LIMIT 1');
+    } catch (e) {
+      if (e.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('🔧 Migrating users table: adding tokens column...');
+        await connection.query('ALTER TABLE users ADD COLUMN tokens BIGINT DEFAULT 100000');
+      }
+    }
 
-        // Default Admin
-        const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', ['admin']);
-        if (rows.length === 0) {
-            const hash = await bcrypt.hash('gzx750403', 10);
-            await connection.query(`
+    // Migration: Add facts and usage_count columns to images
+    try {
+      await connection.query('SELECT facts FROM images LIMIT 1');
+    } catch (e) {
+      if (e.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('🔧 Migrating images table: adding facts column...');
+        await connection.query('ALTER TABLE images ADD COLUMN facts TEXT AFTER language');
+      }
+    }
+
+    try {
+      await connection.query('SELECT usage_count FROM images LIMIT 1');
+    } catch (e) {
+      if (e.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('🔧 Migrating images table: adding usage_count column...');
+        await connection.query('ALTER TABLE images ADD COLUMN usage_count INT DEFAULT 0 AFTER facts');
+      }
+    }
+
+    // Default Admin
+    const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', ['admin']);
+    if (rows.length === 0) {
+      const hash = await bcrypt.hash('gzx750403', 10);
+      await connection.query(`
         INSERT INTO users (username, password_hash, display_name, role, is_approved, expiration_date, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `, ['admin', hash, 'Administrator', 'admin', true, 4102444800000, Date.now()]);
-            console.log('✅ Default admin account created');
-        }
-
-    } catch (err) {
-        console.error('❌ Database Connection Failed during initialization.');
-        console.error('   Error details:', err.message);
-        useMockDb = true;
-    } finally {
-        if (connection) connection.release();
+      console.log('✅ Default admin account created');
     }
+
+  } catch (err) {
+    console.error('❌ Database Connection Failed during initialization.');
+    console.error('   Error details:', err.message);
+    useMockDb = true;
+  } finally {
+    if (connection) connection.release();
+  }
 };

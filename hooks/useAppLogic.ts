@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { GeneratedImage, ComplexityLevel, VisualStyle, Language, AspectRatio, SearchResultItem, User } from '../types';
+import { GeneratedImage, ComplexityLevel, VisualStyle, Language, AspectRatio, SearchResultItem, User, ResearchResult } from '../types';
 import { researchTopicForPrompt, generateInfographicImage, editInfographicImage } from '../services/geminiService';
 import { userService } from '../services/userService';
 import { useAuth } from '../context/AuthContext';
@@ -53,13 +53,18 @@ export const useAppLogic = () => {
             } finally {
                 setCheckingKey(false);
             }
-
-            if (currentUser && currentUser.history) {
-                setImageHistory(currentUser.history);
-            }
         };
         init();
-    }, [currentUser]);
+    }, []);
+
+    // Only sync history when user ID changes (login/logout)
+    useEffect(() => {
+        if (currentUser && currentUser.history) {
+            setImageHistory(currentUser.history);
+        } else if (!currentUser) {
+            setImageHistory([]);
+        }
+    }, [currentUser?.id]);
 
     const handleSelectKey = async () => {
         if (window.aistudio && window.aistudio.openSelectKey) {
@@ -89,7 +94,7 @@ export const useAppLogic = () => {
         setImageHistory([]);
     };
 
-    const handleGenerate = async (e: React.FormEvent) => {
+    const handleGenerate = async (e: any) => {
         e.preventDefault();
         if (isLoading) return;
 
@@ -141,10 +146,17 @@ export const useAppLogic = () => {
             setImageHistory([newImage, ...imageHistory]);
 
             try {
-                await userService.saveUserImage(currentUser, newImage);
+                const savedImage = await userService.saveUserImage(currentUser, newImage);
+                // Update the local image data with the R2 URL returned from server
+                setImageHistory(prev => prev.map(img => img.id === newImage.id ? { ...img, data: savedImage.data } : img));
+
                 const usageResult = await userService.logUsage('可視化引擎', totalTokens);
                 if (usageResult.remainingTokens !== undefined) {
-                    updateCurrentUser({ tokens: usageResult.remainingTokens });
+                    updateCurrentUser({
+                        tokens: usageResult.remainingTokens,
+                        // Also update history in currentUser to keep it in sync
+                        history: [savedImage, ...(currentUser.history || [])]
+                    });
                 }
             } catch (e) {
                 console.error("Failed to save to cloud history", e);
