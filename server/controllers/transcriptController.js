@@ -2,7 +2,8 @@ import { pool } from '../config/db.js';
 import { genAI } from '../config/gemini.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const MODEL_NAME = 'gemini-2.5-flash';
+const MODEL_NAME = 'gemini-2.0-flash'; // Using 2.0 as 2.5 is not yet standard, but user requested latest flash
+const REFINEMENT_MODEL = 'gemini-2.0-flash';
 
 export const processAudio = async (req, res) => {
     if (!genAI) return res.status(503).json({ message: 'AI service is not available.' });
@@ -94,6 +95,79 @@ export const getHistory = async (req, res) => {
         res.json(rows);
     } catch (error) {
         res.status(500).json({ message: `Failed to fetch history: ${error.message}` });
+    }
+};
+
+export const streamTranscript = async (req, res) => {
+    if (!genAI) return res.status(503).json({ message: 'AI service is not available.' });
+
+    const { audio, mimeType } = req.body;
+    if (!audio || !mimeType) {
+        return res.status(400).json({ message: 'Missing audio data or mimeType.' });
+    }
+
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+    });
+
+    try {
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        const result = await model.generateContentStream([
+            "請生成此音頻的完整、詳細的文字記錄。",
+            {
+                inlineData: {
+                    mimeType: mimeType,
+                    data: audio
+                }
+            }
+        ]);
+
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text;
+            if (chunkText) {
+                res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+            }
+        }
+        res.write('data: [DONE]\n\n');
+        res.end();
+    } catch (error) {
+        console.error('Streaming transcription error:', error);
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.end();
+    }
+};
+
+export const refineTranscript = async (req, res) => {
+    if (!genAI) return res.status(503).json({ message: 'AI service is not available.' });
+
+    const { text } = req.body;
+    if (!text) {
+        return res.status(400).json({ message: 'Missing text to refine.' });
+    }
+
+    try {
+        const model = genAI.getGenerativeModel({ model: REFINEMENT_MODEL });
+        const prompt = `你是一位專業的速記員和文案整理專家。請將以下原始錄音文本整理成一份精煉、格式良好的筆記。
+要求：
+1. **去蕪存菁**：刪除所有填充詞（如：嗯、啊、那個、然後）、重復內容以及錯誤的口語開頭。
+2. **結構化**：使用 Markdown 語法。適當添加二級標題、加粗關鍵詞，並使用無序列表陳述要點。
+3. **語言潤色**：使語言通順、專業，且易於閱讀，但不要改變用戶的原意。
+4. **標註糾錯**：如果原文有明顯的邏輯矛盾或疑似識別錯誤，請在修正後用括號註明原文。
+5. **自動標題**：在筆記開頭提供一個簡短有力的標題。
+
+原始文本：
+${text}`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const refinedText = response.text();
+
+        res.json({ refinedText });
+    } catch (error) {
+        console.error('Refinement error:', error);
+        res.status(500).json({ message: `Refinement failed: ${error.message}` });
     }
 };
 

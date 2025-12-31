@@ -126,7 +126,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
     const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
-            const maxFiles = (currentUser?.role === 'vip' || currentUser?.role === 'admin') ? 3 : 1;
+            const maxFiles = (currentUser?.role === 'vip' || currentUser?.role === 'admin' || currentUser?.role === 'thinker') ? 3 : 1;
 
             if (files.length + attachments.length > maxFiles) {
                 alert(`您最多只能上傳 ${maxFiles} 個附件。`);

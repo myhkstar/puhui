@@ -24,6 +24,8 @@ router.post('/process', authenticateToken, (req, res, next) => {
         next();
     });
 }, transcriptController.processAudio);
+router.post('/stream', authenticateToken, transcriptController.streamTranscript);
+router.post('/refine', authenticateToken, transcriptController.refineTranscript);
 router.get('/history', authenticateToken, transcriptController.getHistory);
 router.delete('/:id', authenticateToken, transcriptController.deleteTranscript);
 

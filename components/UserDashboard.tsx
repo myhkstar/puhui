@@ -5,7 +5,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { User, GeneratedImage, UsageLog } from '../types';
 import { userService } from '../services/userService';
-import { History, User as UserIcon, Calendar, Download, Clock, Star, Shield, Activity, Coins, ChevronLeft, ChevronRight, Edit, Save, X, Camera, Loader2 } from 'lucide-react';
+import { History, User as UserIcon, Calendar, Download, Clock, Star, Shield, Activity, Coins, ChevronLeft, ChevronRight, Edit, Save, X, Camera, Loader2, Lock } from 'lucide-react';
 
 interface UserDashboardProps {
     user: User;
@@ -22,6 +22,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
         displayName: user.displayName || '',
         contactEmail: user.contactEmail || '',
         mobile: user.mobile || '',
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
     });
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatarUrl || null);
@@ -34,6 +37,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
                 displayName: user.displayName || '',
                 contactEmail: user.contactEmail || '',
                 mobile: user.mobile || '',
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: '',
             });
             setAvatarFile(null);
             setAvatarPreview(user.avatarUrl || null);
@@ -59,16 +65,30 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
     };
 
     const handleSave = async () => {
+        if (formData.newPassword || formData.confirmPassword || formData.currentPassword) {
+            if (!formData.currentPassword) {
+                alert("請輸入目前密碼以更改密碼。");
+                return;
+            }
+            if (formData.newPassword !== formData.confirmPassword) {
+                alert("新密碼與確認密碼不符。");
+                return;
+            }
+            if (formData.newPassword.length < 6) {
+                alert("新密碼長度至少需 6 位。");
+                return;
+            }
+        }
+
         setIsSaving(true);
         try {
             let newAvatarUrl = user.avatarUrl;
 
             // 1. Handle avatar upload first if a new file is selected
             if (avatarFile) {
-                // The backend should return the final URL of the uploaded image
                 const response = await userService.getAvatarUploadUrl(avatarFile.name, avatarFile.type);
                 const uploadUrl = response.uploadUrl;
-                newAvatarUrl = response.finalUrl; // Assuming the service returns the final URL
+                newAvatarUrl = response.finalUrl;
 
                 await fetch(uploadUrl, {
                     method: 'PUT',
@@ -77,24 +97,44 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
                 });
             }
 
-            // 2. Prepare the complete user profile data
+            // 2. Handle password change if requested
+            if (formData.newPassword) {
+                await userService.changePassword({
+                    currentPassword: formData.currentPassword,
+                    newPassword: formData.newPassword
+                });
+            }
+
+            // 3. Prepare the complete user profile data
             const profileToUpdate = {
-                ...formData,
+                displayName: formData.displayName,
+                contactEmail: formData.contactEmail,
+                mobile: formData.mobile,
                 avatarUrl: newAvatarUrl,
             };
 
-            // 3. Update the profile with all data at once
+            // 4. Update the profile with all data at once
             const updatedUser = await userService.updateUserProfile(profileToUpdate);
 
-            // 4. Update the local state with the returned user data
+            // 5. Update the local state with the returned user data
             if (updatedUser) {
                 onUpdateUser(updatedUser);
             }
-            
+
             setIsEditing(false);
-        } catch (error) {
+            // Clear password fields
+            setFormData(prev => ({
+                ...prev,
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+            }));
+            if (formData.newPassword) {
+                alert("個人資料及密碼已成功更新。");
+            }
+        } catch (error: any) {
             console.error("Failed to save profile:", error);
-            alert("個人資料儲存失敗，請稍後再試。");
+            alert(error.message || "個人資料儲存失敗，請稍後再試。");
         } finally {
             setIsSaving(false);
         }
@@ -131,7 +171,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
             setUsageLogs(allLogs.slice(start, end));
         }
     };
-    
+
     useEffect(() => {
         fetchHistory(historyPage);
         fetchUsage(usagePage);
@@ -141,38 +181,38 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
 
     return (
         <div className="max-w-6xl mx-auto mt-8 animate-in fade-in duration-500 p-4">
-            
+
             {/* Profile Header */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 md:p-8 mb-8 shadow-lg flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 dark:bg-cyan-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
                 <div className="relative shrink-0">
-                    <img 
-                        src={avatarPreview || `https://api.dicebear.com/8.x/initials/svg?seed=${user.username}`} 
-                        alt="Avatar" 
+                    <img
+                        src={avatarPreview || `https://api.dicebear.com/8.x/initials/svg?seed=${user.username}`}
+                        alt="Avatar"
                         className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-lg"
                     />
                     {isEditing && (
-                        <button 
+                        <button
                             onClick={() => fileInputRef.current?.click()}
                             className="absolute bottom-0 right-0 bg-cyan-500 text-white p-2 rounded-full hover:bg-cyan-600 transition-colors shadow-md"
                         >
                             <Camera className="w-4 h-4" />
                         </button>
                     )}
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handleAvatarChange} 
-                        className="hidden" 
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleAvatarChange}
+                        className="hidden"
                         accept="image/png, image/jpeg"
                     />
                 </div>
-                
+
                 <div className="flex-1 text-center md:text-left space-y-2">
                     <div className="flex items-center justify-center md:justify-start gap-3">
                         {isEditing ? (
-                            <input 
+                            <input
                                 type="text"
                                 name="displayName"
                                 value={formData.displayName}
@@ -194,12 +234,45 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
                                 <Shield className="w-3 h-3 fill-current" /> Admin
                             </span>
                         )}
+                        {user.role === 'thinker' && (
+                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded text-xs font-bold border border-blue-200 dark:border-blue-800 flex items-center gap-1">
+                                <Activity className="w-3 h-3 fill-current" /> Thinker
+                            </span>
+                        )}
                     </div>
 
                     {isEditing ? (
-                        <div className="flex flex-col md:flex-row items-center gap-3 md:gap-6 text-slate-500 dark:text-slate-400 text-sm">
-                            <input type="email" name="contactEmail" value={formData.contactEmail} onChange={handleInputChange} placeholder="Email" className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-xs" />
-                            <input type="text" name="mobile" value={formData.mobile} onChange={handleInputChange} placeholder="Phone" className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-xs" />
+                        <div className="flex flex-col gap-4 mt-4">
+                            <div className="flex flex-col md:flex-row items-center gap-3 md:gap-6 text-slate-500 dark:text-slate-400 text-sm">
+                                <div className="flex flex-col gap-1 w-full md:w-auto">
+                                    <label className="text-[10px] font-bold uppercase text-slate-400">電子信箱</label>
+                                    <input type="email" name="contactEmail" value={formData.contactEmail} onChange={handleInputChange} placeholder="Email" className="bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg text-xs focus:ring-2 focus:ring-cyan-500 outline-none" />
+                                </div>
+                                <div className="flex flex-col gap-1 w-full md:w-auto">
+                                    <label className="text-[10px] font-bold uppercase text-slate-400">聯絡電話</label>
+                                    <input type="text" name="mobile" value={formData.mobile} onChange={handleInputChange} placeholder="Phone" className="bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg text-xs focus:ring-2 focus:ring-cyan-500 outline-none" />
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 space-y-3">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                                    <Lock className="w-3 h-3" /> 修改密碼 (若不修改請留空)
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] text-slate-400">目前密碼</label>
+                                        <input type="password" name="currentPassword" value={formData.currentPassword} onChange={handleInputChange} className="bg-white dark:bg-slate-900 px-3 py-2 rounded-lg text-xs border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-cyan-500 outline-none" />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] text-slate-400">新密碼</label>
+                                        <input type="password" name="newPassword" value={formData.newPassword} onChange={handleInputChange} className="bg-white dark:bg-slate-900 px-3 py-2 rounded-lg text-xs border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-cyan-500 outline-none" />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] text-slate-400">確認新密碼</label>
+                                        <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} className="bg-white dark:bg-slate-900 px-3 py-2 rounded-lg text-xs border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-cyan-500 outline-none" />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         <div className="flex flex-col md:flex-row items-center gap-3 md:gap-6 text-slate-500 dark:text-slate-400 text-sm">
@@ -207,11 +280,11 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
                             <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3" /> 加入於 {new Date(user.created_at).toLocaleDateString()}
                             </span>
-                            
+
                             {user.expirationDate && (
-                                 <span className={`flex items-center gap-1 font-medium ${Date.now() > user.expirationDate ? 'text-red-500' : 'text-slate-600 dark:text-slate-300'}`}>
+                                <span className={`flex items-center gap-1 font-medium ${Date.now() > user.expirationDate ? 'text-red-500' : 'text-slate-600 dark:text-slate-300'}`}>
                                     <Clock className="w-3 h-3" /> 有效期至：{new Date(user.expirationDate).toLocaleDateString()}
-                                 </span>
+                                </span>
                             )}
                         </div>
                     )}
@@ -220,8 +293,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
                 <div className="flex flex-col gap-2">
                     {isEditing ? (
                         <>
-                            <button 
-                                onClick={handleSave} 
+                            <button
+                                onClick={handleSave}
                                 disabled={isSaving}
                                 className="px-4 py-2 bg-green-500 text-white rounded-lg flex items-center justify-center gap-2 disabled:bg-green-300"
                             >
@@ -282,8 +355,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
                                 </p>
                                 <div className="mt-auto flex items-center justify-between">
                                     <span className="text-[10px] text-slate-500">{new Date(img.timestamp).toLocaleDateString()}</span>
-                                    <a 
-                                        href={img.data} 
+                                    <a
+                                        href={img.data}
                                         download={`infogenius-${img.id}.png`}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -313,7 +386,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onRestore, onUpdate
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] my-6 flex items-center gap-2">
                 <Activity className="w-4 h-4" /> 使用記錄
             </h3>
-            
+
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden mb-8">
                 <table className="w-full text-sm text-left">
                     <thead className="bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-500 uppercase">

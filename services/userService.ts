@@ -396,5 +396,63 @@ export const userService = {
             headers: getHeaders()
         });
         if (!res.ok) throw new Error("Failed to delete transcript");
+    },
+
+    streamTranscript: async function* (audioBase64: string, mimeType: string) {
+        const res = await fetch(`${API_BASE}/transcript/stream`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ audio: audioBase64, mimeType })
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message || 'Streaming failed');
+        }
+
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("No reader available");
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6).trim();
+                    if (data === '[DONE]') return;
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.text) yield parsed.text;
+                        if (parsed.error) throw new Error(parsed.error);
+                    } catch (e) {
+                        console.error("Error parsing SSE data", e);
+                    }
+                }
+            }
+        }
+    },
+
+    refineTranscript: async (text: string) => {
+        const res = await fetch(`${API_BASE}/transcript/refine`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ text })
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message || 'Refinement failed');
+        }
+
+        const data = await res.json();
+        return data.refinedText;
     }
 };

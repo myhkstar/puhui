@@ -3,6 +3,7 @@ import HDImageGenerator from './smart-tools/HDImageGenerator';
 import OneClickBeautify from './smart-tools/OneClickBeautify';
 import AIStylist from './smart-tools/AIStylist';
 import AudioTranscription from './smart-tools/AudioTranscription';
+import MeetingNotes from './smart-tools/MeetingNotes';
 import Placeholder from './smart-tools/Placeholder';
 import { User } from '../types';
 
@@ -39,7 +40,7 @@ const SmartTools: React.FC<SmartToolsProps> = ({ user, onUpdateUser }) => {
             case 'PPTGenerator':
                 return <Placeholder title="PPT初稿" />;
             case 'MeetingNotes':
-                return <Placeholder title="會議記錄" />;
+                return <MeetingNotes />;
             default:
                 return <HDImageGenerator user={user} onUpdateUser={onUpdateUser} />;
         }
