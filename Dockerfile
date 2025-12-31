@@ -13,9 +13,11 @@ WORKDIR /app
 COPY package*.json ./
 # 只安装生产环境依赖
 RUN npm install --only=production
-# 从构建阶段复制生成的 dist 文件夹和 server.js
+# 从构建阶段复制生成的 dist 文件夹和后端代码
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server ./server
 COPY --from=builder /app/server.js ./server.js
+COPY --from=builder /app/init.sql ./init.sql
 
 # 设置环境变量
 ENV PORT=8080

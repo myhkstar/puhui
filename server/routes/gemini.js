@@ -1,0 +1,15 @@
+import express from 'express';
+import * as geminiController from '../controllers/geminiController.js';
+import { authenticateToken } from '../middleware/auth.js';
+
+const router = express.Router();
+
+router.post('/research', authenticateToken, geminiController.research);
+router.post('/generate-image', authenticateToken, geminiController.generateImage);
+router.post('/edit-image', authenticateToken, geminiController.editImage);
+router.post('/generate-simple-image', authenticateToken, geminiController.generateSimpleImage);
+router.post('/chat', authenticateToken, geminiController.chat);
+router.post('/generate-title', authenticateToken, geminiController.generateTitle);
+router.post('/beautify-image', authenticateToken, geminiController.beautifyImage);
+
+export default router;
