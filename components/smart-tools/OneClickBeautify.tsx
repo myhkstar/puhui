@@ -1,7 +1,7 @@
 import React, { useState, useRef, useContext } from 'react';
 import { Camera, Upload, Wand2, Loader2 } from 'lucide-react';
 import { beautifyImage } from '../../services/geminiService';
-import { AuthContext } from '../../App';
+import { useAuth } from '../../context/AuthContext';
 
 const prompt1 = `这是一张手机拍的人像照片，请进行专业人像后期（保持真实人像摄影风格，不要卡通或油画化）：
 - 显著提升面部和眼睛的清晰度与细节，锐化眼睛但自然；不要擅自给人物眼睛添加双眼皮，除非图片中人物眼睛本身就是双眼皮
@@ -29,7 +29,7 @@ const prompt3 = `这是一张用手机拍摄的照片，请帮我专业后期修
 风格参考：iPhone原生相机「摄影风格-鲜艳」或专业摄影师用Lightroom调出的自然通透感`;
 
 const OneClickBeautify: React.FC = () => {
-    const { currentUser } = useContext(AuthContext);
+    const { currentUser } = useAuth();
     const [image, setImage] = useState<string | null>(null);
     const [beautifiedImage, setBeautifiedImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +49,7 @@ const OneClickBeautify: React.FC = () => {
     const handleBeautify = async () => {
         if (!image || !currentUser?.token) return;
         setIsLoading(true);
-        
+
         // Simulate image analysis to choose a prompt
         const analysisResult = 'person'; // In a real app, this would be an API call
         let prompt = prompt3;

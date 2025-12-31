@@ -4,14 +4,14 @@ import { chatWithGemini, generateTitleForText } from '../services/geminiService'
 import { ChatMessage, ChatSession, User, SpecialAssistant } from '../types'; // Consolidated types
 import SpecialAssistantManager from './SpecialAssistantManager'; // New import
 import { Send, Trash2, Plus, MessageSquare, Paperclip, Loader2, Bot, User as UserIcon, Menu, Cpu, Zap, BrainCircuit, Lock, Edit2, Check, Copy, Search, Sparkles, X } from 'lucide-react';
-import { AuthContext } from '../App';
+import { useAuth } from '../context/AuthContext';
 
 interface AIAssistantProps {
     user: User | null;
 }
 
 const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
-    const { updateCurrentUser } = useContext(AuthContext);
+    const { updateCurrentUser } = useAuth();
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -157,11 +157,11 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
         e.preventDefault();
         if ((!input.trim() && attachments.length === 0) || loading) return;
 
-        setLoading(true); 
+        setLoading(true);
 
         let sessionId = currentSessionId;
         let isNew = false;
-        
+
         // If no session, create one first
         if (!sessionId) {
             isNew = true;
@@ -179,7 +179,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
 
         const userMsg = input;
         const attachmentNames = attachments.map(f => f.name).join(', ');
-        const promptText = attachments.length > 0 
+        const promptText = attachments.length > 0
             ? `${input}\n\n請結合我上傳的檔案 (${attachmentNames}) 進行分析。`
             : input;
 
@@ -189,17 +189,17 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
             content: input + (attachments.length > 0 ? ` [附件: ${attachmentNames}]` : ''),
             timestamp: Date.now()
         };
-        
+
         setMessages(prev => [...prev, tempMsg]);
         const currentAttachments = [...attachments];
         setInput('');
         setAttachments([]);
-        
+
         // Fix: Save user message BEFORE setting session ID to state
         // This ensures when useEffect fires loadMessages, the user message is in DB
         try {
             await userService.saveChatMessage(sessionId, 'user', tempMsg.content);
-            
+
             // If new session, NOW we set the ID, triggering loadMessages (which will now find the user msg in DB)
             if (isNew) {
                 setCurrentSessionId(sessionId);
@@ -221,21 +221,21 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
 
             if (selectedSpecialAssistant) {
                 const systemPrompt = `你是一個名為 "${selectedSpecialAssistant.name}" 的特別助手。` +
-                                     `你的角色是：${selectedSpecialAssistant.role}。` +
-                                     (selectedSpecialAssistant.personality ? `你的個性是：${selectedSpecialAssistant.personality}。` : '') +
-                                     (selectedSpecialAssistant.tone ? `你的語氣是：${selectedSpecialAssistant.tone}。` : '') +
-                                     `你的任務是：${selectedSpecialAssistant.task}。` +
-                                     `你的行事準則/步驟是：${selectedSpecialAssistant.steps}。` +
-                                     (selectedSpecialAssistant.format ? `你的回答格式是：${selectedSpecialAssistant.format}。` : '');
+                    `你的角色是：${selectedSpecialAssistant.role}。` +
+                    (selectedSpecialAssistant.personality ? `你的個性是：${selectedSpecialAssistant.personality}。` : '') +
+                    (selectedSpecialAssistant.tone ? `你的語氣是：${selectedSpecialAssistant.tone}。` : '') +
+                    `你的任務是：${selectedSpecialAssistant.task}。` +
+                    `你的行事準則/步驟是：${selectedSpecialAssistant.steps}。` +
+                    (selectedSpecialAssistant.format ? `你的回答格式是：${selectedSpecialAssistant.format}。` : '');
                 context = [{ role: 'system', content: systemPrompt }, ...context];
             }
-            
+
             const modelName = chatMode === 'light' ? 'gemini-2.5-flash' : 'gemini-3-flash-preview';
             const thinkingLevel = chatMode === 'light' ? 'auto' : 'high'; // Add thinking level
             if (!currentUser?.token) throw new Error("Authentication token is missing.");
             const aiResponse = await chatWithGemini(
-                context, 
-                promptText, 
+                context,
+                promptText,
                 modelName,
                 currentUser.token,
                 thinkingLevel, // Pass thinking level
@@ -280,7 +280,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
                     {sessions.map(session => (
-                        <div 
+                        <div
                             key={session.id}
                             onClick={() => setCurrentSessionId(session.id)}
                             className={`p-3 rounded-xl cursor-pointer flex items-center justify-between group transition-colors ${currentSessionId === session.id ? 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-900 dark:text-cyan-100' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'}`}
@@ -307,7 +307,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                                 ) : (
                                     <button onClick={(e) => startEditingTitle(e, session)} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"><Edit2 className="w-3 h-3" /></button>
                                 )}
-                                <button 
+                                <button
                                     onClick={(e) => deleteSession(e, session.id)}
                                     className="p-1 hover:bg-red-100 hover:text-red-600 rounded"
                                 >
@@ -334,7 +334,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
 
                     {/* Mode Selector */}
                     <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-                        <button 
+                        <button
                             onClick={() => setChatMode('light')}
                             className={`px-3 py-1 text-xs font-bold rounded-md flex items-center gap-1.5 transition-colors ${chatMode === 'light' ? 'bg-white dark:bg-slate-700 text-cyan-600 dark:text-cyan-400 shadow-sm' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
                         >
@@ -378,11 +378,10 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-slate-200 dark:bg-slate-700' : 'bg-cyan-100 dark:bg-cyan-900/50'}`}>
                                         {msg.role === 'user' ? <UserIcon className="w-5 h-5 text-slate-600 dark:text-slate-300" /> : <Bot className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />}
                                     </div>
-                                    <div className={`relative max-w-[80%] p-4 rounded-2xl ${
-                                        msg.role === 'user' 
-                                        ? 'bg-cyan-600 text-white rounded-tr-none' 
-                                        : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm rounded-tl-none border border-slate-200 dark:border-slate-700'
-                                    }`}>
+                                    <div className={`relative max-w-[80%] p-4 rounded-2xl ${msg.role === 'user'
+                                            ? 'bg-cyan-600 text-white rounded-tr-none'
+                                            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm rounded-tl-none border border-slate-200 dark:border-slate-700'
+                                        }`}>
                                         <div className="whitespace-pre-wrap leading-relaxed text-sm">
                                             {msg.content}
                                         </div>
@@ -397,7 +396,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                         })
                     )}
                     {loading && (
-                         <div className="flex gap-4 animate-pulse">
+                        <div className="flex gap-4 animate-pulse">
                             <div className="w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-900/50 flex items-center justify-center shrink-0">
                                 <Bot className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                             </div>
@@ -405,7 +404,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                                 <Loader2 className="w-4 h-4 animate-spin text-cyan-500" />
                                 <span className="text-sm text-slate-500 font-medium">普普正在思考...</span>
                             </div>
-                         </div>
+                        </div>
                     )}
                     <div ref={messagesEndRef} className="h-4" />
                 </div>
@@ -467,8 +466,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                             className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 focus:ring-2 focus:ring-cyan-500 outline-none dark:text-white disabled:opacity-70 disabled:bg-slate-100 dark:disabled:bg-slate-900"
                             disabled={loading}
                         />
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             disabled={(!input.trim() && attachments.length === 0) || loading}
                             className="p-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl disabled:opacity-50 transition-colors shadow-lg shadow-cyan-500/20 flex items-center justify-center min-w-[48px]"
                         >
