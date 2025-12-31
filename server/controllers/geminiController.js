@@ -309,3 +309,32 @@ export const beautifyImage = async (req, res) => {
         res.status(500).json({ message: 'An error occurred during image beautification.' });
     }
 };
+
+export const analyzeImage = async (req, res) => {
+    if (!genAI) return res.status(503).json({ message: 'AI service is not available.' });
+    const { image } = req.body;
+    try {
+        const cleanBase64 = image.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+        const prompt = `Analyze this image and classify it into one of these three categories: "person", "object", or "other". 
+        - "person": If the main subject is one or more people (portraits, group photos, etc.).
+        - "object": If the main subject is a specific item, food, product, or toy where details and textures are important.
+        - "other": If it's a landscape, abstract art, or doesn't fit the above.
+        Return ONLY the category name in lowercase.`;
+
+        const response = await genAI.models.generateContent({
+            model: 'gemini-1.5-flash-latest',
+            contents: {
+                parts: [
+                    { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
+                    { text: prompt }
+                ]
+            }
+        });
+
+        const category = response.text?.trim().toLowerCase() || 'other';
+        res.json({ category });
+    } catch (error) {
+        console.error('Gemini image analysis error:', error);
+        res.status(500).json({ message: 'An error occurred during image analysis.' });
+    }
+};

@@ -131,7 +131,7 @@ const SpecialAssistantManager: React.FC<SpecialAssistantManagerProps> = ({ curre
             onAssistantSelected(assistant || null);
             onClose();
         } else {
-            alert("請先選擇一個特別助手。");
+            alert("請先選擇一個特別助手");
         }
     };
 

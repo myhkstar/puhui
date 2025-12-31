@@ -51,22 +51,26 @@ export const generateSimpleImage = async (prompt: string, images: string[], toke
 };
 
 export const chatWithGemini = async (
-    history: { role: string, content: string }[],
-    newMessage: string,
-    modelName: string,
-    token: string,
-    thinkingLevel: string,
-    isSearchEnabled: boolean, // Add isSearchEnabled parameter
-    attachments?: { mimeType: string, data: string }[]
+  history: { role: string, content: string }[],
+  newMessage: string,
+  modelName: string,
+  token: string,
+  thinkingLevel: string,
+  isSearchEnabled: boolean, // Add isSearchEnabled parameter
+  attachments?: { mimeType: string, data: string }[]
 ): Promise<AIResponse> => {
-    return apiRequest('chat', { history, newMessage, modelName, thinkingLevel, isSearchEnabled, attachments }, token);
+  return apiRequest('chat', { history, newMessage, modelName, thinkingLevel, isSearchEnabled, attachments }, token);
 };
 
 export const generateTitleForText = async (text: string, token: string): Promise<string> => {
-    const result = await apiRequest('generate-title', { text }, token);
-    return result.title;
+  const result = await apiRequest('generate-title', { text }, token);
+  return result.title;
 };
 
 export const beautifyImage = async (image: string, prompt: string, token: string): Promise<AIResponse> => {
-    return apiRequest('beautify-image', { image, prompt }, token);
+  return apiRequest('beautify-image', { image, prompt }, token);
+};
+
+export const analyzeImage = async (image: string, token: string): Promise<{ category: string }> => {
+  return apiRequest('analyze-image', { image }, token);
 };

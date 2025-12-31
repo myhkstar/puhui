@@ -11,5 +11,6 @@ router.post('/generate-simple-image', authenticateToken, geminiController.genera
 router.post('/chat', authenticateToken, geminiController.chat);
 router.post('/generate-title', authenticateToken, geminiController.generateTitle);
 router.post('/beautify-image', authenticateToken, geminiController.beautifyImage);
+router.post('/analyze-image', authenticateToken, geminiController.analyzeImage);
 
 export default router;

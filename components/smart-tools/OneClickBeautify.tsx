@@ -1,6 +1,6 @@
 import React, { useState, useRef, useContext } from 'react';
-import { Camera, Upload, Wand2, Loader2 } from 'lucide-react';
-import { beautifyImage } from '../../services/geminiService';
+import { Camera, Upload, Wand2, Loader2, X, Check, RefreshCw } from 'lucide-react';
+import { beautifyImage, analyzeImage } from '../../services/geminiService';
 import { useAuth } from '../../context/AuthContext';
 
 const prompt1 = `这是一张手机拍的人像照片，请进行专业人像后期（保持真实人像摄影风格，不要卡通或油画化）：
@@ -33,7 +33,52 @@ const OneClickBeautify: React.FC = () => {
     const [image, setImage] = useState<string | null>(null);
     const [beautifiedImage, setBeautifiedImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+    const [analysisCategory, setAnalysisCategory] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            setCameraStream(stream);
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+            setIsCameraOpen(true);
+        } catch (err) {
+            console.error("Error accessing camera:", err);
+            alert("無法存取相機，請確保已授權相機權限。");
+        }
+    };
+
+    const stopCamera = () => {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            setCameraStream(null);
+        }
+        setIsCameraOpen(false);
+    };
+
+    const capturePhoto = () => {
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg');
+                setImage(dataUrl);
+                setBeautifiedImage(null);
+                setAnalysisCategory(null);
+                stopCamera();
+            }
+        }
+    };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -50,21 +95,25 @@ const OneClickBeautify: React.FC = () => {
         if (!image || !currentUser?.token) return;
         setIsLoading(true);
 
-        // Simulate image analysis to choose a prompt
-        const analysisResult = 'person'; // In a real app, this would be an API call
-        let prompt = prompt3;
-        if (analysisResult === 'person') {
-            prompt = prompt1;
-        } else if (analysisResult === 'object') {
-            prompt = prompt2;
-        }
-
         try {
-            const result = await beautifyImage(image, prompt, currentUser.token);
+            // 1. Analyze image content
+            const { category } = await analyzeImage(image, currentUser.token);
+            setAnalysisCategory(category);
+
+            // 2. Select appropriate prompt
+            let selectedPrompt = prompt3;
+            if (category === 'person') {
+                selectedPrompt = prompt1;
+            } else if (category === 'object') {
+                selectedPrompt = prompt2;
+            }
+
+            // 3. Beautify image
+            const result = await beautifyImage(image, selectedPrompt, currentUser.token);
             setBeautifiedImage(result.content);
         } catch (error) {
             console.error("Failed to beautify image:", error);
-            alert("美化图片失败，请稍后再试。");
+            alert("美化圖片失敗，請稍後再試。");
         } finally {
             setIsLoading(false);
         }
@@ -85,10 +134,10 @@ const OneClickBeautify: React.FC = () => {
                             <button
                                 type="button"
                                 className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-cyan-600 hover:bg-cyan-700 mt-2"
-                                onClick={() => alert('相机功能待开发')}
+                                onClick={startCamera}
                             >
                                 <Camera className="-ml-1 mr-2 h-5 w-5" />
-                                使用相机
+                                使用相機
                             </button>
                             <input
                                 ref={fileInputRef}
@@ -99,42 +148,116 @@ const OneClickBeautify: React.FC = () => {
                             />
                         </div>
                     ) : (
-                        <div className="relative">
-                            <img src={beautifiedImage || image} alt="Preview" className="max-w-full h-auto rounded-lg" />
+                        <div className="relative w-full">
+                            <img src={beautifiedImage || image} alt="Preview" className="w-full h-auto rounded-lg shadow-lg" />
+                            {beautifiedImage && (
+                                <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
+                                    已美化
+                                </div>
+                            )}
+                            {analysisCategory && !beautifiedImage && (
+                                <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
+                                    識別為: {analysisCategory === 'person' ? '人物' : analysisCategory === 'object' ? '物體/商品' : '其他'}
+                                </div>
+                            )}
                             <button
                                 onClick={() => {
                                     setImage(null);
                                     setBeautifiedImage(null);
+                                    setAnalysisCategory(null);
                                 }}
-                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
+                                className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-md transition-colors"
                             >
-                                X
+                                <X className="w-4 h-4" />
                             </button>
                         </div>
                     )}
                 </div>
-                <div>
+                <div className="flex flex-col gap-4">
                     {image && (
-                        <button
-                            onClick={handleBeautify}
-                            disabled={isLoading}
-                            className="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400"
-                        >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                                    处理中...
-                                </>
-                            ) : (
-                                <>
-                                    <Wand2 className="-ml-1 mr-2 h-5 w-5" />
-                                    一键美化
-                                </>
+                        <>
+                            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <h4 className="text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">處理邏輯：</h4>
+                                <ul className="text-xs space-y-2 text-slate-600 dark:text-slate-400">
+                                    <li className={analysisCategory === 'person' ? 'text-cyan-600 font-bold' : ''}>• 人像：專業後期，提升清晰度，還原膚色</li>
+                                    <li className={analysisCategory === 'object' ? 'text-cyan-600 font-bold' : ''}>• 物體/商品：增強質感，銳化細節，優化光影</li>
+                                    <li className={analysisCategory === 'other' ? 'text-cyan-600 font-bold' : ''}>• 其他：專業修復，糾正模糊，優化曝光</li>
+                                </ul>
+                            </div>
+                            <button
+                                onClick={handleBeautify}
+                                disabled={isLoading}
+                                className="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-bold rounded-xl shadow-lg text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 transition-all"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
+                                        正在分析並處理...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Wand2 className="-ml-1 mr-2 h-5 w-5" />
+                                        一鍵美化
+                                    </>
+                                )}
+                            </button>
+                            {beautifiedImage && (
+                                <button
+                                    onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = beautifiedImage;
+                                        link.download = 'beautified_image.png';
+                                        link.click();
+                                    }}
+                                    className="w-full inline-flex justify-center items-center px-6 py-3 border border-slate-300 dark:border-slate-600 text-base font-bold rounded-xl shadow-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                >
+                                    下載美化後的圖片
+                                </button>
                             )}
-                        </button>
+                        </>
                     )}
                 </div>
             </div>
+
+            {/* Camera Modal */}
+            {isCameraOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4">
+                    <div className="relative w-full max-w-2xl bg-slate-900 rounded-3xl overflow-hidden shadow-2xl">
+                        <div className="p-4 border-b border-white/10 flex justify-between items-center">
+                            <h3 className="text-white font-bold flex items-center gap-2">
+                                <Camera className="w-5 h-5 text-cyan-400" /> 拍攝照片
+                            </h3>
+                            <button onClick={stopCamera} className="text-white/60 hover:text-white">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="relative aspect-video bg-black">
+                            <video
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                        <div className="p-6 flex justify-center gap-4">
+                            <button
+                                onClick={stopCamera}
+                                className="px-6 py-2 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={capturePhoto}
+                                className="px-8 py-2 rounded-xl bg-cyan-500 text-white font-bold hover:bg-cyan-600 shadow-lg shadow-cyan-500/30 transition-all flex items-center gap-2"
+                            >
+                                <div className="w-4 h-4 rounded-full bg-white animate-pulse" />
+                                拍照
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <canvas ref={canvasRef} className="hidden" />
         </div>
     );
 };
