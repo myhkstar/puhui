@@ -13,6 +13,7 @@ import usageRoutes from './routes/usage.js';
 import chatRoutes from './routes/chat.js';
 import geminiRoutes from './routes/gemini.js';
 import specialAssistantRoutes from './routes/specialAssistants.js';
+import transcriptRoutes from './routes/transcript.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +34,7 @@ app.use('/api/usage', usageRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/gemini', geminiRoutes);
 app.use('/api/special-assistants', specialAssistantRoutes);
+app.use('/api/transcript', transcriptRoutes);
 
 // Serve Frontend in Production
 const clientBuildPath = path.join(__dirname, '../dist');

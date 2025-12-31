@@ -100,6 +100,20 @@ export const initDb = async () => {
       )
     `);
 
+    // Transcripts Table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS transcripts (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id INT,
+        title VARCHAR(255),
+        content TEXT,
+        keywords VARCHAR(255),
+        audio_urls TEXT,
+        created_at BIGINT,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
     // Migration: Add tokens column
     try {
       await connection.query('SELECT tokens FROM users LIMIT 1');

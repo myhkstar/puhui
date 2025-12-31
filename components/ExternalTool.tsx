@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import HDImageGenerator from './smart-tools/HDImageGenerator';
 import OneClickBeautify from './smart-tools/OneClickBeautify';
 import AIStylist from './smart-tools/AIStylist';
+import AudioTranscription from './smart-tools/AudioTranscription';
 import Placeholder from './smart-tools/Placeholder';
 import { User } from '../types';
 
@@ -11,13 +12,13 @@ interface SmartToolsProps {
 }
 
 const tools = [
-    { name: '高清图片生成', component: 'HDImageGenerator' },
-    { name: '一键美图', component: 'OneClickBeautify' },
-    { name: 'AI造型师', component: 'AIStylist' },
-    { name: 'PDF处理', component: 'PDFTool' },
+    { name: '高清圖片生成', component: 'HDImageGenerator' },
+    { name: '一鍵美圖', component: 'OneClickBeautify' },
+    { name: 'AI造型師', component: 'AIStylist' },
+    { name: '錄音整理', component: 'AudioTranscription' },
+    { name: 'PDF處理', component: 'PDFTool' },
     { name: 'PPT初稿', component: 'PPTGenerator' },
-    { name: '录音整理', component: 'AudioTranscription' },
-    { name: '会议记录', component: 'MeetingNotes' },
+    { name: '會議記錄', component: 'MeetingNotes' },
 ];
 
 const SmartTools: React.FC<SmartToolsProps> = ({ user, onUpdateUser }) => {
@@ -31,12 +32,12 @@ const SmartTools: React.FC<SmartToolsProps> = ({ user, onUpdateUser }) => {
                 return <OneClickBeautify />;
             case 'AIStylist':
                 return <AIStylist />;
+            case 'AudioTranscription':
+                return <AudioTranscription />;
             case 'PDFTool':
                 return <Placeholder title="PDF處理" />;
             case 'PPTGenerator':
                 return <Placeholder title="PPT初稿" />;
-            case 'AudioTranscription':
-                return <Placeholder title="錄音整理" />;
             case 'MeetingNotes':
                 return <Placeholder title="會議記錄" />;
             default:

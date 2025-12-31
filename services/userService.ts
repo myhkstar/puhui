@@ -359,5 +359,42 @@ export const userService = {
         } catch (e: any) {
             return { success: false, message: e.message };
         }
+    },
+
+    // --- Transcript System ---
+    processTranscript: async (files: File[]) => {
+        const formData = new FormData();
+        files.forEach(file => formData.append('files', file));
+
+        const res = await fetch(`${API_BASE}/transcript/process`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('vision_token')}`
+            },
+            body: formData
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.message || 'Transcription failed');
+        }
+
+        return res.json();
+    },
+
+    getTranscriptHistory: async () => {
+        const res = await fetch(`${API_BASE}/transcript/history`, {
+            headers: getHeaders()
+        });
+        if (res.ok) return await res.json();
+        return [];
+    },
+
+    deleteTranscript: async (id: string) => {
+        const res = await fetch(`${API_BASE}/transcript/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+        if (!res.ok) throw new Error("Failed to delete transcript");
     }
 };
