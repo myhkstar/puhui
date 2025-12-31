@@ -226,7 +226,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
 
             // Call AI
             // We pass pure text history for context (simplified)
-            let context = messages.map(m => ({
+            let context: { role: string, content: string }[] = messages.map(m => ({
                 role: m.role,
                 content: m.content
             }));
@@ -245,24 +245,52 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
             const modelName = chatMode === 'light' ? 'gemini-3-flash-preview' : 'gemini-3-pro-preview';
             const thinkingLevel = chatMode === 'light' ? 'auto' : 'high'; // Add thinking level
             if (!currentUser?.token) throw new Error("Authentication token is missing.");
-            const aiResponse = await chatWithGemini(
+
+            // Create placeholder for model response
+            const modelMsgId = Date.now() + 1;
+            setMessages(prev => [...prev, { role: 'model', content: "", timestamp: modelMsgId }]);
+
+            const generator = chatWithGemini(
                 context,
                 promptText,
                 modelName,
                 currentUser.token,
-                thinkingLevel, // Pass thinking level
-                isSearchEnabled, // Pass search enabled state
+                thinkingLevel,
+                isSearchEnabled,
                 currentAttachments
             );
 
-            await userService.saveChatMessage(sessionId, 'model', aiResponse.content);
-            const usageResult = await userService.logUsage('深聊淺談', aiResponse.usage);
-            if (usageResult.remainingTokens !== undefined) {
-                updateCurrentUser({ tokens: usageResult.remainingTokens });
+            let accumulatedContent = "";
+            let finalUsage = 0;
+
+            for await (const chunk of generator) {
+                if (chunk.text) {
+                    accumulatedContent += chunk.text;
+                    setMessages(prev => prev.map(msg =>
+                        msg.timestamp === modelMsgId ? { ...msg, content: accumulatedContent } : msg
+                    ));
+                }
+                if (chunk.groundingMetadata?.searchResults) {
+                    setMessages(prev => prev.map(msg =>
+                        msg.timestamp === modelMsgId ? { ...msg, sources: chunk.groundingMetadata.searchResults } : msg
+                    ));
+                }
+                if (chunk.usage) {
+                    finalUsage = chunk.usage;
+                }
             }
 
-            // Append model response to UI
-            setMessages(prev => [...prev, { role: 'model', content: aiResponse.content, timestamp: Date.now() }]);
+            // Save full message to DB
+            await userService.saveChatMessage(sessionId, 'model', accumulatedContent);
+
+            // Log usage if available
+            if (finalUsage > 0) {
+                const usageResult = await userService.logUsage('深聊淺談', finalUsage);
+                if (usageResult.remainingTokens !== undefined) {
+                    updateCurrentUser({ tokens: usageResult.remainingTokens });
+                }
+            }
+
         } catch (err) {
             console.error(err);
             setMessages(prev => [...prev, { role: 'model', content: "抱歉，普普遇到了一點問題，請稍後再試試！", timestamp: Date.now() }]);
@@ -277,7 +305,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
             <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-slate-50 dark:bg-slate-950 transition-all duration-300 border-r border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden`}>
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                     <button
-                        onClick={createNewSession}
+                        onClick={() => createNewSession()}
                         className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 transition-all"
                     >
                         <Plus className="w-4 h-4" /> 新對話
@@ -397,6 +425,25 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                                         <div className="whitespace-pre-wrap leading-relaxed text-sm">
                                             {msg.content}
                                         </div>
+                                        {msg.sources && msg.sources.length > 0 && (
+                                            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                                                <p className="text-xs font-bold text-slate-500 mb-1">參考來源：</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {msg.sources.map((source, i) => (
+                                                        <a
+                                                            key={i}
+                                                            href={source.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-xs bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 px-2 py-1 rounded hover:underline truncate max-w-[200px]"
+                                                            title={source.title}
+                                                        >
+                                                            {i + 1}. {source.title}
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="self-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => handleCopy(msg.content, messageId)} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">

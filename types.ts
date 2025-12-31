@@ -70,6 +70,7 @@ export interface ChatMessage {
   role: 'user' | 'model';
   content: string;
   timestamp: number;
+  sources?: SearchResultItem[];
 }
 
 export interface ChatSession {
@@ -108,6 +109,7 @@ export interface SpecialAssistant {
 export interface AIResponse {
   content: string;
   usage: number;
+  sources?: SearchResultItem[];
 }
 
 // Properly extend the Window interface for the global scope

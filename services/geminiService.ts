@@ -50,16 +50,62 @@ export const generateSimpleImage = async (prompt: string, images: string[], toke
   return apiRequest('generate-simple-image', { prompt, images }, token);
 };
 
-export const chatWithGemini = async (
+// Helper for streaming
+async function* streamRequest(endpoint: string, body: any, token: string) {
+  const response = await fetch(`/api/gemini/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `API request failed with status ${response.status}`);
+  }
+
+  if (!response.body) throw new Error("Response body is null");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6);
+        if (data === '[DONE]') return;
+        try {
+          yield JSON.parse(data);
+        } catch (e) {
+          console.error('Error parsing SSE data:', e);
+        }
+      }
+    }
+  }
+}
+
+export const chatWithGemini = async function* (
   history: { role: string, content: string }[],
   newMessage: string,
   modelName: string,
   token: string,
   thinkingLevel: string,
-  isSearchEnabled: boolean, // Add isSearchEnabled parameter
+  isSearchEnabled: boolean,
   attachments?: { mimeType: string, data: string }[]
-): Promise<AIResponse> => {
-  return apiRequest('chat', { history, newMessage, modelName, thinkingLevel, isSearchEnabled, attachments }, token);
+) {
+  const generator = streamRequest('chat', { history, newMessage, modelName, thinkingLevel, isSearchEnabled, attachments }, token);
+  for await (const chunk of generator) {
+    yield chunk;
+  }
 };
 
 export const generateTitleForText = async (text: string, token: string): Promise<string> => {
