@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Camera, Upload, Wand2, Loader2, X, Check, RefreshCw } from 'lucide-react';
 import { beautifyImage, analyzeImage } from '../../services/geminiService';
 import { useAuth } from '../../context/AuthContext';
@@ -40,13 +40,16 @@ const OneClickBeautify: React.FC = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
+    useEffect(() => {
+        if (isCameraOpen && cameraStream && videoRef.current) {
+            videoRef.current.srcObject = cameraStream;
+        }
+    }, [isCameraOpen, cameraStream]);
+
     const startCamera = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
             setCameraStream(stream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
             setIsCameraOpen(true);
         } catch (err) {
             console.error("Error accessing camera:", err);
@@ -155,11 +158,6 @@ const OneClickBeautify: React.FC = () => {
                                     已美化
                                 </div>
                             )}
-                            {analysisCategory && !beautifiedImage && (
-                                <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded shadow-md">
-                                    識別為: {analysisCategory === 'person' ? '人物' : analysisCategory === 'object' ? '物體/商品' : '其他'}
-                                </div>
-                            )}
                             <button
                                 onClick={() => {
                                     setImage(null);
@@ -176,14 +174,6 @@ const OneClickBeautify: React.FC = () => {
                 <div className="flex flex-col gap-4">
                     {image && (
                         <>
-                            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <h4 className="text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">處理邏輯：</h4>
-                                <ul className="text-xs space-y-2 text-slate-600 dark:text-slate-400">
-                                    <li className={analysisCategory === 'person' ? 'text-cyan-600 font-bold' : ''}>• 人像：專業後期，提升清晰度，還原膚色</li>
-                                    <li className={analysisCategory === 'object' ? 'text-cyan-600 font-bold' : ''}>• 物體/商品：增強質感，銳化細節，優化光影</li>
-                                    <li className={analysisCategory === 'other' ? 'text-cyan-600 font-bold' : ''}>• 其他：專業修復，糾正模糊，優化曝光</li>
-                                </ul>
-                            </div>
                             <button
                                 onClick={handleBeautify}
                                 disabled={isLoading}

@@ -310,7 +310,7 @@ const SpecialAssistantManager: React.FC<SpecialAssistantManagerProps> = ({ curre
                         disabled={isLoading || !selectedAssistantId}
                         className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg shadow-md transition-colors disabled:opacity-50"
                     >
-                        使用此助手
+                        使用此助手來聊天
                     </button>
                 </div>
             </div>

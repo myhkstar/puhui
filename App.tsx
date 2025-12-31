@@ -18,7 +18,7 @@ import KeySelectionModal from './components/KeySelectionModal';
 import NavButton from './components/NavButton';
 import { useAppLogic } from './hooks/useAppLogic';
 
-import { Search, AlertCircle, History, GraduationCap, Palette, Microscope, Atom, Compass, Globe, Sun, Moon, CreditCard, ExternalLink, DollarSign, User as UserIcon, LogOut, Shield, FileText, BarChart, MessageSquare, Layout, Info, Lightbulb } from 'lucide-react';
+import { Search, AlertCircle, History, GraduationCap, Palette, Microscope, Atom, Compass, Globe, Sun, Moon, CreditCard, ExternalLink, DollarSign, User as UserIcon, LogOut, Shield, FileText, BarChart, MessageSquare, Layout, Info, Lightbulb, Trash2 } from 'lucide-react';
 
 const App: React.FC = () => {
     const {
