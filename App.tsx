@@ -33,7 +33,7 @@ const App: React.FC = () => {
         aspectRatio, setAspectRatio,
         isLoading, loadingMessage, loadingStep, loadingFacts,
         error,
-        imageHistory, currentSearchResults,
+        imageHistory, lastResearchResult, currentSearchResults,
         isDarkMode, setIsDarkMode,
         hasApiKey, checkingKey,
         handleSelectKey, handleLoginSuccess, handleLogout,
@@ -333,6 +333,7 @@ const App: React.FC = () => {
 
                                 {isLoading && <Loading status={loadingMessage} step={loadingStep} facts={loadingFacts} />}
 
+                                {/* Error Message */}
                                 {error && (
                                     <div className="max-w-2xl mx-auto mt-8 p-6 bg-red-100 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-2xl flex items-center gap-4 text-red-800 dark:text-red-200 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 shadow-sm">
                                         <AlertCircle className="w-6 h-6 flex-shrink-0 text-red-500 dark:text-red-400" />
@@ -350,13 +351,15 @@ const App: React.FC = () => {
                                     </div>
                                 )}
 
-                                {imageHistory.length > 0 && !isLoading && (
+                                {(imageHistory.length > 0 || lastResearchResult) && !isLoading && (
                                     <>
-                                        <Infographic
-                                            image={imageHistory[0]}
-                                            onEdit={handleEdit}
-                                            isEditing={isLoading}
-                                        />
+                                        {imageHistory.length > 0 && (
+                                            <Infographic
+                                                image={imageHistory[0]}
+                                                onEdit={handleEdit}
+                                                isEditing={isLoading}
+                                            />
+                                        )}
 
                                         {/* New Info Section: Tokens & Facts */}
                                         <div className="max-w-6xl mx-auto mt-4 px-4 sm:px-0">
@@ -371,7 +374,7 @@ const App: React.FC = () => {
                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">生成耗用</span>
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className="text-xl font-display font-bold text-slate-900 dark:text-white">
-                                                                    {imageHistory[0].usage?.toLocaleString() || 'N/A'}
+                                                                    {(imageHistory.length > 0 ? imageHistory[0].usage : lastResearchResult?.usage)?.toLocaleString() || 'N/A'}
                                                                 </span>
                                                                 <span className="text-xs text-slate-400 font-medium">tokens</span>
                                                             </div>
@@ -390,7 +393,7 @@ const App: React.FC = () => {
                                                             <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest">核心研究事實</h4>
                                                         </div>
                                                         <ul className="space-y-3">
-                                                            {imageHistory[0].facts?.map((fact, idx) => (
+                                                            {(imageHistory.length > 0 ? imageHistory[0].facts : lastResearchResult?.facts)?.map((fact, idx) => (
                                                                 <li key={idx} className="flex gap-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed group">
                                                                     <span className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-md text-[10px] font-bold text-slate-400 group-hover:text-amber-500 transition-colors shrink-0">
                                                                         {idx + 1}

@@ -24,6 +24,7 @@ export const useAppLogic = () => {
     const [error, setError] = useState<string | null>(null);
 
     const [imageHistory, setImageHistory] = useState<GeneratedImage[]>([]);
+    const [lastResearchResult, setLastResearchResult] = useState<ResearchResult | null>(null);
     const [currentSearchResults, setCurrentSearchResults] = useState<SearchResultItem[]>([]);
     const [isDarkMode, setIsDarkMode] = useState(true);
 
@@ -105,7 +106,7 @@ export const useAppLogic = () => {
         setIsLoading(true);
         setError(null);
         setLoadingStep(1);
-        setLoadingFacts([]);
+        // Don't clear loadingFacts immediately to avoid flickering if we want to show last ones
         setCurrentSearchResults([]);
         setLoadingMessage(`正在研究主題...`);
 
@@ -115,6 +116,7 @@ export const useAppLogic = () => {
             let totalTokens = researchResult.usage || 0;
 
             setLoadingFacts(researchResult.facts);
+            setLastResearchResult(researchResult);
             setCurrentSearchResults(researchResult.searchResults);
 
             setLoadingStep(2);
@@ -236,7 +238,7 @@ export const useAppLogic = () => {
         aspectRatio, setAspectRatio,
         isLoading, loadingMessage, loadingStep, loadingFacts,
         error, setError,
-        imageHistory, currentSearchResults,
+        imageHistory, lastResearchResult, currentSearchResults,
         isDarkMode, setIsDarkMode,
         hasApiKey, checkingKey,
         handleSelectKey, handleLoginSuccess, handleLogout,

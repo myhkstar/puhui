@@ -230,7 +230,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                 context = [{ role: 'system', content: systemPrompt }, ...context];
             }
 
-            const modelName = chatMode === 'light' ? 'gemini-2.5-flash' : 'gemini-3-flash-preview';
+            const modelName = chatMode === 'light' ? 'gemini-3-flash-preview' : 'gemini-3-pro-preview';
             const thinkingLevel = chatMode === 'light' ? 'auto' : 'high'; // Add thinking level
             if (!currentUser?.token) throw new Error("Authentication token is missing.");
             const aiResponse = await chatWithGemini(
@@ -379,8 +379,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                                         {msg.role === 'user' ? <UserIcon className="w-5 h-5 text-slate-600 dark:text-slate-300" /> : <Bot className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />}
                                     </div>
                                     <div className={`relative max-w-[80%] p-4 rounded-2xl ${msg.role === 'user'
-                                            ? 'bg-cyan-600 text-white rounded-tr-none'
-                                            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm rounded-tl-none border border-slate-200 dark:border-slate-700'
+                                        ? 'bg-cyan-600 text-white rounded-tr-none'
+                                        : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm rounded-tl-none border border-slate-200 dark:border-slate-700'
                                         }`}>
                                         <div className="whitespace-pre-wrap leading-relaxed text-sm">
                                             {msg.content}
