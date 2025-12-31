@@ -3,14 +3,14 @@ import { useMockDb } from '../services/dbService.js';
 import { mockChatSessions, mockChatMessages } from '../services/mockData.js';
 
 export const createSession = async (req, res) => {
-    const { id, title, created_at } = req.body;
+    const { id, title, special_assistant_id, created_at } = req.body;
     try {
         if (useMockDb) {
-            mockChatSessions.push({ id, user_id: req.user.id, title, created_at, updated_at: created_at });
+            mockChatSessions.push({ id, user_id: req.user.id, title, special_assistant_id, created_at, updated_at: created_at });
             return res.json({ success: true });
         }
-        await pool.query('INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-            [id, req.user.id, title, created_at, created_at]);
+        await pool.query('INSERT INTO chat_sessions (id, user_id, title, special_assistant_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, req.user.id, title, special_assistant_id, created_at, created_at]);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -39,11 +39,11 @@ export const getSessions = async (req, res) => {
             const sessions = mockChatSessions
                 .filter(s => s.user_id === req.user.id)
                 .sort((a, b) => b.updated_at - a.updated_at)
-                .map(r => ({ id: r.id, title: r.title, timestamp: parseInt(r.updated_at) }));
+                .map(r => ({ id: r.id, title: r.title, special_assistant_id: r.special_assistant_id, timestamp: parseInt(r.updated_at) }));
             return res.json(sessions);
         }
         const [rows] = await pool.query('SELECT * FROM chat_sessions WHERE user_id = ? ORDER BY updated_at DESC', [req.user.id]);
-        res.json(rows.map(r => ({ id: r.id, title: r.title, timestamp: parseInt(r.updated_at) })));
+        res.json(rows.map(r => ({ id: r.id, title: r.title, special_assistant_id: r.special_assistant_id, timestamp: parseInt(r.updated_at) })));
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

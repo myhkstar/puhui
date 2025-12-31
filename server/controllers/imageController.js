@@ -6,7 +6,7 @@ import { useMockDb } from '../services/dbService.js';
 import { mockImages } from '../services/mockData.js';
 
 export const saveImage = async (req, res) => {
-    const { id, data, prompt, level, style, language, facts, usage, timestamp } = req.body;
+    const { id, data, prompt, level, style, language, facts, usage, type, timestamp } = req.body;
 
     if (!process.env.R2_BUCKET_NAME) {
         if (!useMockDb) return res.status(500).json({ message: "Server R2 Configuration Missing" });
@@ -57,9 +57,9 @@ export const saveImage = async (req, res) => {
         }
 
         await pool.query(`
-      INSERT INTO images (id, user_id, prompt, r2_key, level, style, language, facts, usage_count, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id, req.user.id, prompt, key, level, style, language, facts ? JSON.stringify(facts) : null, usage || 0, timestamp]);
+      INSERT INTO images (id, user_id, prompt, r2_key, level, style, language, facts, usage_count, type, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id, req.user.id, prompt, key, level, style, language, facts ? JSON.stringify(facts) : null, usage || 0, type || 'infographic', timestamp]);
 
         res.json({ success: true, url });
     } catch (err) {
@@ -87,7 +87,8 @@ export const getHistory = async (req, res) => {
                     style: row.style,
                     language: row.language,
                     facts: row.facts ? JSON.parse(row.facts) : [],
-                    usage: row.usage_count || 0
+                    usage: row.usage_count || 0,
+                    type: row.type || 'infographic'
                 }));
             return res.json(userImages);
         }
@@ -131,7 +132,8 @@ export const getHistory = async (req, res) => {
                 style: row.style,
                 language: row.language,
                 facts: row.facts ? JSON.parse(row.facts) : [],
-                usage: row.usage_count || 0
+                usage: row.usage_count || 0,
+                type: row.type || 'infographic'
             };
         }));
 
@@ -142,7 +144,7 @@ export const getHistory = async (req, res) => {
 };
 
 export const saveGeneratedImage = async (req, res) => {
-    const { id, data, prompt, timestamp } = req.body;
+    const { id, data, prompt, type, timestamp } = req.body;
 
     if (!process.env.R2_BUCKET_NAME) {
         return res.status(500).json({ message: "Server R2 Configuration Missing" });
@@ -164,9 +166,9 @@ export const saveGeneratedImage = async (req, res) => {
         }));
 
         await pool.query(`
-            INSERT INTO images (id, user_id, prompt, r2_key, level, style, language, facts, usage_count, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [id, req.user.id, prompt, key, 'N/A', 'ImageGenerator', 'N/A', null, 0, timestamp]);
+            INSERT INTO images (id, user_id, prompt, r2_key, level, style, language, facts, usage_count, type, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [id, req.user.id, prompt, key, 'N/A', 'ImageGenerator', 'N/A', null, 0, type || 'hd_gen', timestamp]);
 
         res.json({ success: true });
     } catch (err) {

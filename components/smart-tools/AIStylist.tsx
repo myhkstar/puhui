@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Upload, Sparkles, Loader2 } from 'lucide-react';
 import { beautifyImage } from '../../services/geminiService';
+import { userService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
 
 const styles = [
@@ -50,6 +51,15 @@ const AIStylist: React.FC = () => {
         try {
             const result = await beautifyImage(image, selectedStyle.prompt, currentUser.token);
             setStyledImage(result.content);
+
+            // Save to history
+            await userService.saveGeneratedImage({
+                id: Date.now().toString(),
+                data: result.content,
+                prompt: selectedStyle.prompt,
+                type: 'stylist',
+                timestamp: Date.now()
+            });
         } catch (error) {
             console.error("Failed to generate styled image:", error);
             alert("生成风格化图片失败，请稍后再试。");

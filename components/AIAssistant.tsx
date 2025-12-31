@@ -48,10 +48,18 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
     useEffect(() => {
         if (currentSessionId) {
             loadMessages(currentSessionId);
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (session?.special_assistant_id) {
+                const assistant = userSpecialAssistants.find(a => a.id === session.special_assistant_id);
+                setSelectedSpecialAssistant(assistant || null);
+            } else {
+                setSelectedSpecialAssistant(null);
+            }
         } else {
             setMessages([]);
+            setSelectedSpecialAssistant(null);
         }
-    }, [currentSessionId]);
+    }, [currentSessionId, sessions, userSpecialAssistants]);
 
     // Force scroll to bottom whenever messages change or loading state changes
     useEffect(() => {
@@ -75,12 +83,16 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
         setMessages(data);
     };
 
-    const createNewSession = async () => {
+    const createNewSession = async (assistantId?: string) => {
         const id = Date.now().toString();
         // Title will be generated after the first message
-        await userService.createChatSession(id, "新對話");
+        await userService.createChatSession(id, "新對話", assistantId);
         await loadSessions();
         setCurrentSessionId(id);
+        if (assistantId) {
+            const assistant = userSpecialAssistants.find(a => a.id === assistantId);
+            setSelectedSpecialAssistant(assistant || null);
+        }
     };
 
     const deleteSession = async (e: React.MouseEvent, id: string) => {
@@ -168,8 +180,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
             sessionId = Date.now().toString();
             try {
                 // Create with a temporary title
-                await userService.createChatSession(sessionId, "...");
-                setSessions(prev => [{ id: sessionId!, title: "...", timestamp: Date.now() }, ...prev]);
+                await userService.createChatSession(sessionId, "...", selectedSpecialAssistant?.id);
+                setSessions(prev => [{ id: sessionId!, title: "...", special_assistant_id: selectedSpecialAssistant?.id, timestamp: Date.now() }, ...prev]);
             } catch (err) {
                 console.error("Failed to create session:", err);
                 setLoading(false);
@@ -481,7 +493,13 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                 <SpecialAssistantManager
                     currentUser={currentUser}
                     onClose={() => setShowSpecialAssistantModal(false)}
-                    onAssistantSelected={setSelectedSpecialAssistant}
+                    onAssistantSelected={(assistant) => {
+                        if (assistant) {
+                            createNewSession(assistant.id);
+                        } else {
+                            setSelectedSpecialAssistant(null);
+                        }
+                    }}
                 />
             )}
         </div>

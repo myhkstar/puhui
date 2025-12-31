@@ -11,10 +11,11 @@ interface InfographicProps {
   image: GeneratedImage;
   onEdit: (prompt: string) => void;
   onDelete: (id: string) => void;
+  onBack: () => void;
   isEditing: boolean;
 }
 
-const Infographic: React.FC<InfographicProps> = ({ image, onEdit, onDelete, isEditing }) => {
+const Infographic: React.FC<InfographicProps> = ({ image, onEdit, onDelete, onBack, isEditing }) => {
   const [editPrompt, setEditPrompt] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -37,6 +38,14 @@ const Infographic: React.FC<InfographicProps> = ({ image, onEdit, onDelete, isEd
 
   return (
     <div className="flex flex-col items-center w-full max-w-6xl mx-auto animate-in fade-in zoom-in duration-700 mt-8">
+      <div className="w-full flex justify-start mb-4 px-4">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-lg transition-colors"
+        >
+          <X className="w-4 h-4" /> 返回創作歷史
+        </button>
+      </div>
 
       {/* Image Container */}
       <div className="relative group w-full bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-700/50">
@@ -101,8 +110,8 @@ const Infographic: React.FC<InfographicProps> = ({ image, onEdit, onDelete, isEd
                 type="submit"
                 disabled={isEditing || !editPrompt.trim()}
                 className={`w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${isEditing || !editPrompt.trim()
-                    ? 'bg-slate-200 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500 cursor-not-allowed'
-                    : 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-lg shadow-cyan-500/20'
+                  ? 'bg-slate-200 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                  : 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-lg shadow-cyan-500/20'
                   }`}
               >
                 {isEditing ? (

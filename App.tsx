@@ -18,7 +18,7 @@ import KeySelectionModal from './components/KeySelectionModal';
 import NavButton from './components/NavButton';
 import { useAppLogic } from './hooks/useAppLogic';
 
-import { Search, AlertCircle, History, GraduationCap, Palette, Microscope, Atom, Compass, Globe, Sun, Moon, CreditCard, ExternalLink, DollarSign, User as UserIcon, LogOut, Shield, FileText, BarChart, MessageSquare, Layout, Info, Lightbulb, Trash2 } from 'lucide-react';
+import { Search, AlertCircle, History, GraduationCap, Palette, Microscope, Atom, Compass, Globe, Sun, Moon, CreditCard, ExternalLink, DollarSign, User as UserIcon, LogOut, Shield, FileText, BarChart, MessageSquare, Layout, Info, Lightbulb, Trash2, Sparkles } from 'lucide-react';
 
 const App: React.FC = () => {
     const {
@@ -351,13 +351,17 @@ const App: React.FC = () => {
                                     </div>
                                 )}
 
-                                {(imageHistory.length > 0 || lastResearchResult) && !isLoading && (
+                                {imageHistory.filter(img => !img.type || img.type === 'infographic').length > 0 || lastResearchResult ? (
                                     <>
-                                        {imageHistory.length > 0 && (
+                                        {imageHistory.filter(img => !img.type || img.type === 'infographic').length > 0 && (
                                             <Infographic
-                                                image={imageHistory[0]}
+                                                image={imageHistory.filter(img => !img.type || img.type === 'infographic')[0]}
                                                 onEdit={handleEdit}
                                                 onDelete={handleDeleteImage}
+                                                onBack={() => {
+                                                    // Scroll to history section
+                                                    document.getElementById('creation-history')?.scrollIntoView({ behavior: 'smooth' });
+                                                }}
                                                 isEditing={isLoading}
                                             />
                                         )}
@@ -410,45 +414,83 @@ const App: React.FC = () => {
 
                                         <SearchResults results={currentSearchResults} />
                                     </>
-                                )}
+                                ) : null}
 
-                                {imageHistory.length > 1 && (
-                                    <div className="max-w-7xl mx-auto mt-16 md:mt-24 border-t border-slate-200 dark:border-white/10 pt-12 transition-colors">
-                                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
-                                            <History className="w-4 h-4" />
-                                            工作階段存檔 (Session)
-                                        </h3>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
-                                            {imageHistory.slice(1).map((img) => (
-                                                <div
-                                                    key={img.id}
-                                                    onClick={() => restoreImage(img)}
-                                                    className="group relative cursor-pointer rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 hover:border-cyan-500/50 transition-all shadow-lg bg-white dark:bg-slate-900/50 backdrop-blur-sm"
-                                                >
-                                                    <img src={img.data} alt={img.prompt} className="w-full aspect-video object-cover opacity-90 dark:opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
-                                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 pt-8 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <p className="text-xs text-white font-bold truncate font-display flex-1">{img.prompt}</p>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeleteImage(img.id);
-                                                                }}
-                                                                className="p-1.5 bg-red-500/20 hover:bg-red-500 text-red-200 hover:text-white rounded-lg transition-colors ml-2"
-                                                                title="刪除圖片"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            {img.level && <span className="text-[9px] text-cyan-100 uppercase font-bold tracking-wide px-1.5 py-0.5 rounded-full bg-cyan-900/60 border border-cyan-500/20">{img.level}</span>}
-                                                        </div>
+                                <div id="creation-history" className="max-w-7xl mx-auto mt-16 md:mt-24 border-t border-slate-200 dark:border-white/10 pt-12 transition-colors">
+                                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
+                                        <History className="w-4 h-4" />
+                                        可視化創作歷史 (Infographics)
+                                    </h3>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+                                        {imageHistory.filter(img => !img.type || img.type === 'infographic').slice(1).map((img) => (
+                                            <div
+                                                key={img.id}
+                                                onClick={() => restoreImage(img)}
+                                                className="group relative cursor-pointer rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 hover:border-cyan-500/50 transition-all shadow-lg bg-white dark:bg-slate-900/50 backdrop-blur-sm"
+                                            >
+                                                <img src={img.data} alt={img.prompt} className="w-full aspect-video object-cover opacity-90 dark:opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
+                                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 pt-8 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <p className="text-xs text-white font-bold truncate font-display flex-1">{img.prompt}</p>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteImage(img.id);
+                                                            }}
+                                                            className="p-1.5 bg-red-500/20 hover:bg-red-500 text-red-200 hover:text-white rounded-lg transition-colors ml-2"
+                                                            title="刪除圖片"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        {img.level && <span className="text-[9px] text-cyan-100 uppercase font-bold tracking-wide px-1.5 py-0.5 rounded-full bg-cyan-900/60 border border-cyan-500/20">{img.level}</span>}
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
+
+                                    {/* New Section: Generated Images */}
+                                    {imageHistory.filter(img => img.type && img.type !== 'infographic').length > 0 && (
+                                        <div className="mt-16">
+                                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
+                                                <Sparkles className="w-4 h-4" />
+                                                已生成圖片 (Generated Images)
+                                            </h3>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+                                                {imageHistory.filter(img => img.type && img.type !== 'infographic').map((img) => (
+                                                    <div
+                                                        key={img.id}
+                                                        className="group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 hover:border-purple-500/50 transition-all shadow-lg bg-white dark:bg-slate-900/50 backdrop-blur-sm"
+                                                    >
+                                                        <img src={img.data} alt={img.prompt} className="w-full aspect-video object-cover opacity-90 dark:opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
+                                                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 pt-8 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <p className="text-xs text-white font-bold truncate font-display flex-1">{img.prompt}</p>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDeleteImage(img.id);
+                                                                    }}
+                                                                    className="p-1.5 bg-red-500/20 hover:bg-red-500 text-red-200 hover:text-white rounded-lg transition-colors ml-2"
+                                                                    title="刪除圖片"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <span className="text-[9px] text-purple-100 uppercase font-bold tracking-wide px-1.5 py-0.5 rounded-full bg-purple-900/60 border border-purple-500/20">
+                                                                    {img.type === 'beautify' ? '一鍵美圖' : img.type === 'stylist' ? 'AI造型師' : '圖片生成'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </>
                         )}
 

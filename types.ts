@@ -22,6 +22,7 @@ export interface GeneratedImage {
   aspectRatio?: AspectRatio;
   usage?: number;
   facts?: string[];
+  type?: string;
 }
 
 export interface SearchResultItem {
@@ -47,7 +48,7 @@ export interface User {
   created_at: number;
   history: GeneratedImage[];
   displayName?: string;
-  
+
   // New Fields
   contactEmail?: string; // Optional user provided email
   mobile?: string;       // Optional mobile number
@@ -74,6 +75,7 @@ export interface ChatMessage {
 export interface ChatSession {
   id: string;
   title: string;
+  special_assistant_id?: string;
   timestamp: number;
 }
 
@@ -104,8 +106,8 @@ export interface SpecialAssistant {
 
 // AI Service Responses
 export interface AIResponse {
-    content: string;
-    usage: number;
+  content: string;
+  usage: number;
 }
 
 // Properly extend the Window interface for the global scope

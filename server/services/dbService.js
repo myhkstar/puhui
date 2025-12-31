@@ -37,6 +37,10 @@ export const initDb = async () => {
         level VARCHAR(50),
         style VARCHAR(50),
         language VARCHAR(50),
+        facts TEXT,
+        usage_count INT DEFAULT 0,
+        type VARCHAR(50) DEFAULT 'infographic',
+        is_deleted BOOLEAN DEFAULT FALSE,
         created_at BIGINT,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
@@ -48,6 +52,7 @@ export const initDb = async () => {
         id VARCHAR(255) PRIMARY KEY,
         user_id INT,
         title VARCHAR(255),
+        special_assistant_id VARCHAR(36),
         created_at BIGINT,
         updated_at BIGINT,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -168,6 +173,26 @@ export const initDb = async () => {
       await connection.query('ALTER TABLE special_assistants MODIFY COLUMN steps TEXT NULL');
     } catch (e) {
       console.warn('⚠️ Migration warning for special_assistants nullable columns:', e.message);
+    }
+
+    // Migration: Add special_assistant_id to chat_sessions
+    try {
+      await connection.query('SELECT special_assistant_id FROM chat_sessions LIMIT 1');
+    } catch (e) {
+      if (e.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('🔧 Migrating chat_sessions table: adding special_assistant_id column...');
+        await connection.query('ALTER TABLE chat_sessions ADD COLUMN special_assistant_id VARCHAR(36) AFTER title');
+      }
+    }
+
+    // Migration: Add type to images
+    try {
+      await connection.query('SELECT type FROM images LIMIT 1');
+    } catch (e) {
+      if (e.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('🔧 Migrating images table: adding type column...');
+        await connection.query('ALTER TABLE images ADD COLUMN type VARCHAR(50) DEFAULT "infographic" AFTER usage_count');
+      }
     }
 
     // Default Admin

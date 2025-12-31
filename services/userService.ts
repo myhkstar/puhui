@@ -165,7 +165,7 @@ export const userService = {
         return {};
     },
 
-    saveGeneratedImage: async (image: { id: string, data: string, prompt: string, timestamp: number }) => {
+    saveGeneratedImage: async (image: { id: string, data: string, prompt: string, type?: string, timestamp: number }) => {
         try {
             const res = await fetch(`${API_BASE}/generated-images`, {
                 method: 'POST',
@@ -199,11 +199,11 @@ export const userService = {
     },
 
     // --- Chat System ---
-    createChatSession: async (id: string, title: string) => {
+    createChatSession: async (id: string, title: string, specialAssistantId?: string) => {
         const res = await fetch(`${API_BASE}/chat/sessions`, {
             method: 'POST',
             headers: getHeaders(),
-            body: JSON.stringify({ id, title, created_at: Date.now() })
+            body: JSON.stringify({ id, title, special_assistant_id: specialAssistantId, created_at: Date.now() })
         });
         if (!res.ok) throw new Error("Failed to create chat session");
     },

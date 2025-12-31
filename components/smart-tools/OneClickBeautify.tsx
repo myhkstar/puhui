@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Camera, Upload, Wand2, Loader2, X, Check, RefreshCw } from 'lucide-react';
 import { beautifyImage, analyzeImage } from '../../services/geminiService';
+import { userService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
 
 const prompt1 = `这是一张手机拍的人像照片，请进行专业人像后期（保持真实人像摄影风格，不要卡通或油画化）：
@@ -114,6 +115,15 @@ const OneClickBeautify: React.FC = () => {
             // 3. Beautify image
             const result = await beautifyImage(image, selectedPrompt, currentUser.token);
             setBeautifiedImage(result.content);
+
+            // 4. Save to history
+            await userService.saveGeneratedImage({
+                id: Date.now().toString(),
+                data: result.content,
+                prompt: selectedPrompt,
+                type: 'beautify',
+                timestamp: Date.now()
+            });
         } catch (error) {
             console.error("Failed to beautify image:", error);
             alert("美化圖片失敗，請稍後再試。");
