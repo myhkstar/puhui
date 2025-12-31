@@ -31,7 +31,7 @@ export const createAssistant = async (req, res) => {
         await pool.query(`
       INSERT INTO special_assistants (id, user_id, name, role, personality, tone, task, steps, format, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id, req.user.id, name, role, personality, tone, task, steps, format, createdAt, updatedAt]);
+    `, [id, req.user.id, name, role, personality || '', tone || '', task || '', steps || '', format || '', createdAt, updatedAt]);
 
         res.status(201).json({
             id,
@@ -61,7 +61,7 @@ export const updateAssistant = async (req, res) => {
       UPDATE special_assistants
       SET name = ?, role = ?, personality = ?, tone = ?, task = ?, steps = ?, format = ?, updated_at = ?
       WHERE id = ? AND user_id = ?
-    `, [name, role, personality, tone, task, steps, format, updatedAt, id, req.user.id]);
+    `, [name, role, personality || '', tone || '', task || '', steps || '', format || '', updatedAt, id, req.user.id]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Special assistant not found or unauthorized' });

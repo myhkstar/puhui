@@ -86,8 +86,8 @@ export const initDb = async () => {
         role TEXT NOT NULL,
         personality TEXT,
         tone TEXT,
-        task TEXT NOT NULL,
-        steps TEXT NOT NULL,
+        task TEXT,
+        steps TEXT,
         format TEXT,
         created_at BIGINT,
         updated_at BIGINT,
@@ -159,6 +159,15 @@ export const initDb = async () => {
         console.log('🔧 Migrating special_assistants table: adding format column...');
         await connection.query('ALTER TABLE special_assistants ADD COLUMN format TEXT AFTER steps');
       }
+    }
+
+    // Migration: Make task and steps nullable if they were previously NOT NULL
+    try {
+      console.log('🔧 Migrating special_assistants table: making task and steps nullable...');
+      await connection.query('ALTER TABLE special_assistants MODIFY COLUMN task TEXT NULL');
+      await connection.query('ALTER TABLE special_assistants MODIFY COLUMN steps TEXT NULL');
+    } catch (e) {
+      console.warn('⚠️ Migration warning for special_assistants nullable columns:', e.message);
     }
 
     // Default Admin
