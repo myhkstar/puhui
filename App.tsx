@@ -37,7 +37,7 @@ const App: React.FC = () => {
         isDarkMode, setIsDarkMode,
         hasApiKey, checkingKey,
         handleSelectKey, handleLoginSuccess, handleLogout,
-        handleGenerate, handleEdit, restoreImage, handleNavClick
+        handleGenerate, handleEdit, restoreImage, handleDeleteImage, handleNavClick
     } = useAppLogic();
 
     if (checkingKey && !hasApiKey) {
@@ -426,7 +426,19 @@ const App: React.FC = () => {
                                                 >
                                                     <img src={img.data} alt={img.prompt} className="w-full aspect-video object-cover opacity-90 dark:opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
                                                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 pt-8 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                                                        <p className="text-xs text-white font-bold truncate mb-1 font-display">{img.prompt}</p>
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <p className="text-xs text-white font-bold truncate font-display flex-1">{img.prompt}</p>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteImage(img.id);
+                                                                }}
+                                                                className="p-1.5 bg-red-500/20 hover:bg-red-500 text-red-200 hover:text-white rounded-lg transition-colors ml-2"
+                                                                title="刪除圖片"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
                                                         <div className="flex gap-2">
                                                             {img.level && <span className="text-[9px] text-cyan-100 uppercase font-bold tracking-wide px-1.5 py-0.5 rounded-full bg-cyan-900/60 border border-cyan-500/20">{img.level}</span>}
                                                         </div>

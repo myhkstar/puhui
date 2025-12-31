@@ -229,6 +229,17 @@ export const useAppLogic = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const handleDeleteImage = async (id: string) => {
+        if (!window.confirm("確定要刪除此圖片嗎？")) return;
+        try {
+            await userService.deleteUserImage(id);
+            setImageHistory(prev => prev.filter(img => img.id !== id));
+        } catch (e) {
+            console.error("Failed to delete image:", e);
+            alert("刪除圖片失敗，請稍後再試。");
+        }
+    };
+
     const handleNavClick = (view: typeof currentView) => {
         if (!currentUser) {
             setShowAuthModal(true);
@@ -254,6 +265,6 @@ export const useAppLogic = () => {
         isDarkMode, setIsDarkMode,
         hasApiKey, checkingKey,
         handleSelectKey, handleLoginSuccess, handleLogout,
-        handleGenerate, handleEdit, restoreImage, handleNavClick
+        handleGenerate, handleEdit, restoreImage, handleDeleteImage, handleNavClick
     };
 };

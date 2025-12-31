@@ -69,8 +69,8 @@ const SpecialAssistantManager: React.FC<SpecialAssistantManagerProps> = ({ curre
     };
 
     const handleSave = async () => {
-        if (!formState.name || !formState.role || !formState.task || !formState.steps) {
-            alert("特別助手名稱、角色、任務和步驟為必填項。");
+        if (!formState.name || !formState.role) {
+            alert("特別助手名稱和角色為必填項。");
             return;
         }
 
@@ -154,7 +154,6 @@ const SpecialAssistantManager: React.FC<SpecialAssistantManagerProps> = ({ curre
                         onChange={handleChange}
                         className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         placeholder="例如：天氣預報"
-                        required
                     />
                 </div>
                 <div>
@@ -166,7 +165,6 @@ const SpecialAssistantManager: React.FC<SpecialAssistantManagerProps> = ({ curre
                         rows={2}
                         className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         placeholder="例如：你是一個天氣預報員"
-                        required
                     ></textarea>
                 </div>
                 <div>
@@ -192,7 +190,7 @@ const SpecialAssistantManager: React.FC<SpecialAssistantManagerProps> = ({ curre
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">任務：<span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">任務：(選填，比如，回答用戶關於天氣的問題)</label>
                     <textarea
                         name="task"
                         value={formState.task || ''}
@@ -200,11 +198,10 @@ const SpecialAssistantManager: React.FC<SpecialAssistantManagerProps> = ({ curre
                         rows={2}
                         className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         placeholder="例如：回答用戶關於天氣的問題"
-                        required
                     ></textarea>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">步驟：<span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">步驟：(選填，比如，當用戶詢問你某地方的天氣時，你會查詢該地方的天氣資料，並回應該地區的氣溫與降雨機率)</label>
                     <textarea
                         name="steps"
                         value={formState.steps || ''}
@@ -212,11 +209,10 @@ const SpecialAssistantManager: React.FC<SpecialAssistantManagerProps> = ({ curre
                         rows={3}
                         className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                         placeholder="例如：當用戶詢問你某地方的天氣時，你會查詢該地方的天氣資料，並回應該地區的氣溫與降雨機率"
-                        required
                     ></textarea>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">格式：</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">格式：(選填，比如，[某地區]今日天氣為[天氣狀況]，氣溫[溫度]，降雨機率[%數字])</label>
                     <textarea
                         name="format"
                         value={formState.format || ''}
@@ -229,6 +225,12 @@ const SpecialAssistantManager: React.FC<SpecialAssistantManagerProps> = ({ curre
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
+                <button
+                    onClick={onClose}
+                    className="px-6 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-lg transition-colors"
+                >
+                    取消
+                </button>
                 <button
                     onClick={handleSave}
                     disabled={isLoading}

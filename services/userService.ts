@@ -7,11 +7,11 @@ import { User, GeneratedImage, UserRole, ChatSession, ChatMessage, UsageLog, Adm
 const API_BASE = '/api';
 
 const getHeaders = () => {
-  const token = localStorage.getItem('vision_token');
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': token ? `Bearer ${token}` : ''
-  };
+    const token = localStorage.getItem('vision_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+    };
 };
 
 export const userService = {
@@ -19,9 +19,9 @@ export const userService = {
     onAuthStateChanged: (callback: (user: User | null) => void) => {
         // Immediate check
         userService.checkSession().then(callback);
-        
+
         // Return a dummy unsubscribe function
-        return () => {};
+        return () => { };
     },
 
     checkSession: async (): Promise<User | null> => {
@@ -34,7 +34,7 @@ export const userService = {
             });
             if (res.ok) {
                 const userData = await res.json();
-                
+
                 // Fetch history separately
                 let history: GeneratedImage[] = [];
                 try {
@@ -64,7 +64,7 @@ export const userService = {
         });
 
         const data = await res.json();
-        
+
         if (!res.ok) {
             throw new Error(data.message || 'Login failed');
         }
@@ -80,17 +80,17 @@ export const userService = {
         try {
             const histRes = await fetch(`${API_BASE}/images`, { headers: getHeaders() });
             if (histRes.ok) history = await histRes.json();
-        } catch (e) {}
+        } catch (e) { }
 
         // Explicitly add the token to the returned user object
         return { ...data, history, token };
     },
 
     register: async (
-        username: string, 
-        password: string, 
-        displayName: string, 
-        contactEmail?: string, 
+        username: string,
+        password: string,
+        displayName: string,
+        contactEmail?: string,
         mobile?: string
     ): Promise<{ success: boolean; message: string }> => {
         try {
@@ -100,7 +100,7 @@ export const userService = {
                 body: JSON.stringify({ username, password, displayName, contactEmail, mobile })
             });
             const data = await res.json();
-            
+
             if (!res.ok) {
                 return { success: false, message: data.message || 'Registration failed' };
             }
@@ -126,7 +126,7 @@ export const userService = {
                 const errData = await res.json();
                 throw new Error(errData.message || "Failed to save image");
             }
-            
+
             const data = await res.json();
             // Return updated image object with the R2 URL
             return { ...image, data: data.url };
@@ -134,6 +134,18 @@ export const userService = {
             console.error("Error saving image:", e);
             throw e;
         }
+    },
+
+    deleteUserImage: async (id: string) => {
+        const res = await fetch(`${API_BASE}/images/${id}`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || "Failed to delete image");
+        }
+        return res.json();
     },
 
     // --- Usage Logs ---
@@ -345,7 +357,7 @@ export const userService = {
             if (!res.ok) return { success: false, message: data.message };
             return { success: true, message: 'User created' };
         } catch (e: any) {
-             return { success: false, message: e.message };
+            return { success: false, message: e.message };
         }
     }
 };

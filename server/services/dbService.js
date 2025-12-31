@@ -124,6 +124,15 @@ export const initDb = async () => {
       }
     }
 
+    try {
+      await connection.query('SELECT is_deleted FROM images LIMIT 1');
+    } catch (e) {
+      if (e.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('🔧 Migrating images table: adding is_deleted column...');
+        await connection.query('ALTER TABLE images ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE AFTER usage_count');
+      }
+    }
+
     // Default Admin
     const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', ['admin']);
     if (rows.length === 0) {

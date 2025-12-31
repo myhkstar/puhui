@@ -7,5 +7,6 @@ const router = express.Router();
 router.post('/', authenticateToken, imageController.saveImage);
 router.get('/', authenticateToken, imageController.getHistory);
 router.post('/generated-images', authenticateToken, imageController.saveGeneratedImage);
+router.delete('/:id', authenticateToken, imageController.deleteImage);
 
 export default router;

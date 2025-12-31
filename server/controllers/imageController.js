@@ -76,7 +76,7 @@ export const getHistory = async (req, res) => {
     try {
         if (useMockDb) {
             const userImages = mockImages
-                .filter(img => img.user_id === req.user.id)
+                .filter(img => img.user_id === req.user.id && !img.is_deleted)
                 .sort((a, b) => b.created_at - a.created_at)
                 .map(row => ({
                     id: row.id,
@@ -92,7 +92,7 @@ export const getHistory = async (req, res) => {
             return res.json(userImages);
         }
 
-        let query = 'SELECT * FROM images WHERE user_id = ?';
+        let query = 'SELECT * FROM images WHERE user_id = ? AND is_deleted = FALSE';
         const params = [req.user.id];
 
         if (period === 'week') {
@@ -172,5 +172,34 @@ export const saveGeneratedImage = async (req, res) => {
     } catch (err) {
         console.error('Generated image save error:', err);
         res.status(500).json({ message: `Save failed: ${err.message}` });
+    }
+};
+
+export const deleteImage = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        if (useMockDb) {
+            const index = mockImages.findIndex(img => img.id === id && img.user_id === req.user.id);
+            if (index !== -1) {
+                mockImages[index].is_deleted = true;
+                return res.json({ success: true });
+            }
+            return res.status(404).json({ message: "Image not found" });
+        }
+
+        const [result] = await pool.query(
+            'UPDATE images SET is_deleted = TRUE WHERE id = ? AND user_id = ?',
+            [id, req.user.id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Image not found or unauthorized" });
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Delete image error:', err);
+        res.status(500).json({ message: `Delete failed: ${err.message}` });
     }
 };

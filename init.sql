@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS images (
     language VARCHAR(50),
     facts TEXT,
     usage_count INT DEFAULT 0,
+    is_deleted BOOLEAN DEFAULT FALSE,
     created_at BIGINT,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
