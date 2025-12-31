@@ -136,7 +136,7 @@ const SpecialAssistantManager: React.FC<SpecialAssistantManagerProps> = ({ curre
     };
 
     const renderAssistantForm = () => (
-        <div className="flex-1 p-6 bg-white dark:bg-slate-900 rounded-xl shadow-md">
+        <div className="flex-1 p-6 bg-white dark:bg-slate-900 rounded-xl shadow-md overflow-y-auto">
             <h3 className="text-xl font-bold mb-4 text-slate-800 dark:text-slate-100">
                 {isEditingNew ? "打造新助手" : "編輯特別助手"}
             </h3>
