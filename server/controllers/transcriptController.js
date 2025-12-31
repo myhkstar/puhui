@@ -12,6 +12,9 @@ export const processAudio = async (req, res) => {
         return res.status(400).json({ message: 'No audio files uploaded.' });
     }
 
+    const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+    console.log(`[Transcript] Received ${files.length} files, total size: ${(totalSize / (1024 * 1024)).toFixed(2)} MB`);
+
     try {
         // 1. Combine audio data or process sequentially
         // For simplicity and to follow the requirement of "outputting one smooth transcript",
