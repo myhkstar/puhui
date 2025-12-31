@@ -49,10 +49,12 @@ export const processAudio = async (req, res) => {
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-        const result = await model.generateContent(parts);
-        const response = await result.response;
-        const fullText = response.text();
+        const response = await genAI.models.generateContent({
+            model: MODEL_NAME,
+            contents: { parts: parts }
+        });
+
+        const fullText = response.text || "";
 
         // Extract keywords and content for database
         const lines = fullText.split('\n');
