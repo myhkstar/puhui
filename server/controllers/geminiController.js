@@ -281,12 +281,14 @@ export const chat = async (req, res) => {
         let aggregatedGroundingMetadata = null;
 
         for await (const chunk of result) {
-            const chunkText = chunk.text();
+            const chunkText = chunk.text; // Changed from .text() to .text
             if (chunkText) {
                 res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
             }
-            if (chunk.groundingMetadata) {
-                aggregatedGroundingMetadata = chunk.groundingMetadata;
+            // Correct path for groundingMetadata in streaming response
+            const metadata = chunk.candidates?.[0]?.groundingMetadata;
+            if (metadata) {
+                aggregatedGroundingMetadata = metadata;
             }
         }
 
