@@ -187,11 +187,11 @@ export const initDb = async () => {
 
     // Migration: Add type to images
     try {
-      await connection.query('SELECT type FROM images LIMIT 1');
+      await connection.query('SELECT `type` FROM images LIMIT 1');
     } catch (e) {
       if (e.code === 'ER_BAD_FIELD_ERROR') {
         console.log('🔧 Migrating images table: adding type column...');
-        await connection.query('ALTER TABLE images ADD COLUMN type VARCHAR(50) DEFAULT "infographic" AFTER usage_count');
+        await connection.query("ALTER TABLE images ADD COLUMN `type` VARCHAR(50) DEFAULT 'infographic' AFTER usage_count");
       }
     }
 
@@ -208,7 +208,7 @@ export const initDb = async () => {
 
   } catch (err) {
     console.error('❌ Database Connection Failed during initialization.');
-    console.error('   Error details:', err.message);
+    console.error('   Error details:', err);
     useMockDb = true;
   } finally {
     if (connection) connection.release();
