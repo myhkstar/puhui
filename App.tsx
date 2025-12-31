@@ -357,6 +357,7 @@ const App: React.FC = () => {
                                             <Infographic
                                                 image={imageHistory[0]}
                                                 onEdit={handleEdit}
+                                                onDelete={handleDeleteImage}
                                                 isEditing={isLoading}
                                             />
                                         )}

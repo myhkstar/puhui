@@ -133,6 +133,34 @@ export const initDb = async () => {
       }
     }
 
+    // Migration: Add task, steps, format columns to special_assistants
+    try {
+      await connection.query('SELECT task FROM special_assistants LIMIT 1');
+    } catch (e) {
+      if (e.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('🔧 Migrating special_assistants table: adding task column...');
+        await connection.query('ALTER TABLE special_assistants ADD COLUMN task TEXT AFTER tone');
+      }
+    }
+
+    try {
+      await connection.query('SELECT steps FROM special_assistants LIMIT 1');
+    } catch (e) {
+      if (e.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('🔧 Migrating special_assistants table: adding steps column...');
+        await connection.query('ALTER TABLE special_assistants ADD COLUMN steps TEXT AFTER task');
+      }
+    }
+
+    try {
+      await connection.query('SELECT format FROM special_assistants LIMIT 1');
+    } catch (e) {
+      if (e.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('🔧 Migrating special_assistants table: adding format column...');
+        await connection.query('ALTER TABLE special_assistants ADD COLUMN format TEXT AFTER steps');
+      }
+    }
+
     // Default Admin
     const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', ['admin']);
     if (rows.length === 0) {
