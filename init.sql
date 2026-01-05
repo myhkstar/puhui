@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     display_name VARCHAR(255),
-    role ENUM('user', 'admin', 'vip') DEFAULT 'user',
+    role ENUM('user', 'admin', 'vip', 'thinker') DEFAULT 'user',
     is_approved BOOLEAN DEFAULT FALSE,
     expiration_date BIGINT,
     contact_email VARCHAR(255),
@@ -73,5 +73,19 @@ CREATE TABLE IF NOT EXISTS special_assistants (
     format TEXT,
     created_at BIGINT,
     updated_at BIGINT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Transcripts Table
+CREATE TABLE IF NOT EXISTS transcripts (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id INT,
+    title VARCHAR(255),
+    keywords TEXT,
+    content TEXT,
+    raw_content TEXT,
+    organized_content TEXT,
+    formalized_content TEXT,
+    created_at BIGINT,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

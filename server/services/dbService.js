@@ -16,7 +16,7 @@ export const initDb = async () => {
         username VARCHAR(255) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
         display_name VARCHAR(255),
-        role ENUM('user', 'admin', 'vip') DEFAULT 'user',
+        role ENUM('user', 'admin', 'vip', 'thinker') DEFAULT 'user',
         is_approved BOOLEAN DEFAULT FALSE,
         expiration_date BIGINT,
         contact_email VARCHAR(255),
@@ -207,6 +207,14 @@ export const initDb = async () => {
         console.log('🔧 Migrating images table: adding type column...');
         await connection.query("ALTER TABLE images ADD COLUMN `type` VARCHAR(50) DEFAULT 'infographic' AFTER usage_count");
       }
+    }
+
+    // Migration: Update role ENUM to include 'thinker'
+    try {
+      console.log('🔧 Migrating users table: updating role ENUM to include thinker...');
+      await connection.query("ALTER TABLE users MODIFY COLUMN role ENUM('user', 'admin', 'vip', 'thinker') DEFAULT 'user'");
+    } catch (e) {
+      console.warn('⚠️ Migration warning for users role ENUM:', e.message);
     }
 
     // Default Admin

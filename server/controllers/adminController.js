@@ -106,7 +106,7 @@ export const createUser = async (req, res) => {
         if (role === 'user') {
             now.setDate(now.getDate() + 7);
             expirationDate = now.getTime();
-        } else if (role === 'vip') {
+        } else if (role === 'vip' || role === 'thinker') {
             now.setMonth(now.getMonth() + 1);
             expirationDate = now.getTime();
         } else if (role === 'admin') {

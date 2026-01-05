@@ -362,7 +362,7 @@ export const userService = {
     },
 
     // --- Transcript System ---
-    processTranscript: async (files: File[]) => {
+    processTranscript: async (files: File[]): Promise<{ id: string, title: string, rawContent: string, createdAt: number }> => {
         const formData = new FormData();
         files.forEach(file => formData.append('files', file));
 
@@ -440,11 +440,11 @@ export const userService = {
         }
     },
 
-    refineTranscript: async (text: string) => {
-        const res = await fetch(`${API_BASE}/transcript/refine`, {
+    refineTranscript: async (id: string, refinementType: 'organize' | 'formalize'): Promise<{ keywords: string, content: string }> => {
+        const res = await fetch(`${API_BASE}/transcript/${id}/refine`, {
             method: 'POST',
             headers: getHeaders(),
-            body: JSON.stringify({ text })
+            body: JSON.stringify({ refinementType })
         });
 
         if (!res.ok) {
@@ -452,7 +452,6 @@ export const userService = {
             throw new Error(err.message || 'Refinement failed');
         }
 
-        const data = await res.json();
-        return data.refinedText;
+        return await res.json();
     }
 };
