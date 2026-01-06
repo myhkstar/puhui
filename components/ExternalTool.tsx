@@ -5,6 +5,7 @@ import AIStylist from './smart-tools/AIStylist';
 import AudioTranscription from './smart-tools/AudioTranscription';
 import MeetingNotes from './smart-tools/MeetingNotes';
 import Placeholder from './smart-tools/Placeholder';
+import PPTGenerator from './smart-tools/PPTGenerator';
 import { User } from '../types';
 
 interface SmartToolsProps {
@@ -38,7 +39,7 @@ const SmartTools: React.FC<SmartToolsProps> = ({ user, onUpdateUser }) => {
             case 'PDFTool':
                 return <Placeholder title="PDF處理" />;
             case 'PPTGenerator':
-                return <Placeholder title="PPT初稿" />;
+                return <PPTGenerator />;
             case 'MeetingNotes':
                 return <MeetingNotes />;
             default:
