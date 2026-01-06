@@ -2,8 +2,8 @@ import { pool } from '../config/db.js';
 import { genAI } from '../config/gemini.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const MODEL_NAME = 'gemini-2.5-flash';
-const REFINEMENT_MODEL = 'gemini-2.5-flash';
+const MODEL_NAME = 'gemini-1.5-flash-latest';
+const REFINEMENT_MODEL = 'gemini-1.5-flash-latest';
 
 export const processAudio = async (req, res) => {
     if (!genAI) return res.status(503).json({ message: 'AI service is not available.' });
@@ -32,10 +32,11 @@ export const processAudio = async (req, res) => {
             }))
         ];
 
-        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-        const result = await model.generateContent({ contents: [{ parts }] });
-        const response = await result.response;
-        const rawContent = response.text() || "音訊無法識別。";
+        const response = await genAI.models.generateContent({
+            model: MODEL_NAME,
+            contents: { parts }
+        });
+        const rawContent = response.text || "音訊無法識別。";
 
         const transcriptId = uuidv4();
         const createdAt = Date.now();
@@ -86,16 +87,20 @@ export const streamTranscript = async (req, res) => {
     });
 
     try {
-        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-        const result = await model.generateContentStream([
-            "請生成此音頻的完整、詳細的文字記錄。",
-            {
-                inlineData: {
-                    mimeType: mimeType,
-                    data: audio
-                }
+        const result = await genAI.models.generateContentStream({
+            model: MODEL_NAME,
+            contents: {
+                parts: [
+                    { text: "請生成此音頻的完整、詳細的文字記錄。" },
+                    {
+                        inlineData: {
+                            mimeType: mimeType,
+                            data: audio
+                        }
+                    }
+                ]
             }
-        ]);
+        });
 
         for await (const chunk of result.stream) {
             const chunkText = chunk.text;
@@ -154,13 +159,14 @@ ${rawContent}
         } else {
             return res.status(400).json({ message: 'Invalid refinement type.' });
         }
-        
+
         prompt += "\n\n請直接輸出最終文稿，不要包含任何額外的解釋。";
 
-        const model = genAI.getGenerativeModel({ model: REFINEMENT_MODEL });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const refinedText = response.text();
+        const response = await genAI.models.generateContent({
+            model: REFINEMENT_MODEL,
+            contents: { parts: [{ text: prompt }] }
+        });
+        const refinedText = response.text || "";
 
         const lines = refinedText.split('\n');
         const keywordsLine = lines[0] || '';

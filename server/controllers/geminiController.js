@@ -381,13 +381,17 @@ export const analyzeImage = async (req, res) => {
         - "other": If it's a landscape, abstract art, or doesn't fit the above.
         Return ONLY the category name in lowercase.`;
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-        const response = await model.generateContent([
-            { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
-            { text: prompt }
-        ]);
+        const response = await genAI.models.generateContent({
+            model: 'gemini-1.5-flash-latest',
+            contents: {
+                parts: [
+                    { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
+                    { text: prompt }
+                ]
+            }
+        });
 
-        const category = response.response.text()?.trim().toLowerCase() || 'other';
+        const category = response.text?.trim().toLowerCase() || 'other';
         res.json({ category });
     } catch (error) {
         console.error('Gemini image analysis error:', error);
