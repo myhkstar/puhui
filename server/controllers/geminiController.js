@@ -326,7 +326,7 @@ export const generateTitle = async (req, res) => {
     try {
         const systemPrompt = `You are a title generator. Your task is to create a very short, concise, and descriptive title (max 5 words, in the same language as the input) for the following user message. Do not add quotes or any other formatting.`;
         const response = await genAI.models.generateContent({
-            model: 'gemini-1.5-flash-latest',
+            model: 'gemini-2.0-flash',
             contents: `${systemPrompt}\n\nUser Message: "${text}"\n\nTitle:`,
         });
         const title = response.text?.trim().replace(/"/g, '') || text.substring(0, 20);
@@ -382,7 +382,7 @@ export const analyzeImage = async (req, res) => {
         Return ONLY the category name in lowercase.`;
 
         const response = await genAI.models.generateContent({
-            model: 'gemini-1.5-flash-latest',
+            model: 'gemini-2.0-flash',
             contents: {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
