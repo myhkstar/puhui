@@ -13,6 +13,65 @@ interface Transcript {
     createdAt: number;
 }
 
+const compressAudio = async (file: File): Promise<File> => {
+    try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const arrayBuffer = await file.arrayBuffer();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+        // Target: 16kHz, Mono
+        const targetSampleRate = 16000;
+        const offlineCtx = new OfflineAudioContext(
+            1,
+            Math.ceil(audioBuffer.duration * targetSampleRate),
+            targetSampleRate
+        );
+
+        const source = offlineCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(offlineCtx.destination);
+        source.start();
+
+        const renderedBuffer = await offlineCtx.startRendering();
+        const wavBlob = bufferToWav(renderedBuffer);
+        return new File([wavBlob], file.name.replace(/\.[^/.]+$/, "") + "_compressed.wav", { type: 'audio/wav' });
+    } catch (e) {
+        console.warn("Compression failed, using original file", e);
+        return file;
+    }
+};
+
+function bufferToWav(abuffer: AudioBuffer) {
+    let numOfChan = abuffer.numberOfChannels,
+        length = abuffer.length * numOfChan * 2 + 44,
+        buffer = new ArrayBuffer(length),
+        view = new DataView(buffer),
+        channels = [], i, sample,
+        offset = 0,
+        pos = 0;
+
+    function setUint16(data: number) { view.setUint16(pos, data, true); pos += 2; }
+    function setUint32(data: number) { view.setUint32(pos, data, true); pos += 4; }
+
+    setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
+    setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
+    setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan);
+    setUint16(numOfChan * 2); setUint16(16);
+    setUint32(0x61746164); setUint32(length - pos - 4);
+
+    for (i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
+    while (pos < length) {
+        for (i = 0; i < numOfChan; i++) {
+            sample = Math.max(-1, Math.min(1, channels[i][offset]));
+            sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF);
+            view.setInt16(pos, sample, true);
+            pos += 2;
+        }
+        offset++;
+    }
+    return new Blob([buffer], { type: "audio/wav" });
+}
+
 const AudioTranscription: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [processingStage, setProcessingStage] = useState<ProcessingStage>('idle');
@@ -53,23 +112,53 @@ const AudioTranscription: React.FC = () => {
     const handleProcess = async () => {
         if (files.length === 0) return;
 
-        setProcessingStage('transcribing');
+        setProcessingStage('uploading');
         setError(null);
         setActiveTranscript(null);
 
         try {
-            const data = await userService.processTranscript(files);
-            setActiveTranscript({
-                id: data.id,
-                title: data.title,
-                rawContent: data.rawContent,
-                createdAt: data.createdAt,
-            });
+            // 1. Compress files
+            const compressedFiles = await Promise.all(files.map(f => compressAudio(f)));
+
+            setProcessingStage('transcribing');
+
+            // 2. Start streaming process
+            const stream = userService.processTranscript(compressedFiles);
+            let accumulatedText = "";
+
+            for await (const chunk of stream) {
+                if (chunk.error) {
+                    throw new Error(chunk.error);
+                }
+
+                if (chunk.text) {
+                    accumulatedText += chunk.text;
+                    setActiveTranscript(prev => ({
+                        id: prev?.id || 'temp',
+                        title: prev?.title || '正在轉寫...',
+                        rawContent: accumulatedText,
+                        createdAt: prev?.createdAt || Date.now()
+                    }));
+                }
+
+                if (chunk.done) {
+                    setActiveTranscript({
+                        id: chunk.id,
+                        title: chunk.title,
+                        keywords: chunk.keywords,
+                        content: chunk.content,
+                        rawContent: chunk.content, // Use finalized content
+                        createdAt: chunk.createdAt,
+                    });
+                }
+            }
+
             setFiles([]);
             setProcessingStage('done');
             loadHistory();
         } catch (err: any) {
-            setError(err.message || "初步轉寫失敗，請稍後再試");
+            console.error(err);
+            setError(err.message || "轉寫失敗，請稍後再試");
             setProcessingStage('idle');
         }
     };
@@ -88,9 +177,9 @@ const AudioTranscription: React.FC = () => {
             setProcessingStage('done');
         }
     };
-    
+
     const handleDownload = (transcript: Transcript) => {
-        const textToDownload = transcript.content 
+        const textToDownload = transcript.content
             ? `${transcript.keywords}\n\n${transcript.content}`
             : transcript.rawContent || '';
         const blob = new Blob([textToDownload], { type: 'text/plain' });
@@ -122,7 +211,7 @@ const AudioTranscription: React.FC = () => {
         setProcessingStage('idle');
     };
 
-    const isProcessing = processingStage === 'transcribing' || processingStage === 'refining';
+    const isProcessing = processingStage === 'uploading' || processingStage === 'transcribing' || processingStage === 'refining';
 
     return (
         <div className="p-6 max-w-4xl mx-auto">
@@ -138,7 +227,7 @@ const AudioTranscription: React.FC = () => {
 
             {/* Upload Section */}
             {!activeTranscript && (
-                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 mb-8 shadow-sm">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 mb-8 shadow-sm">
                     <div
                         onClick={() => !isProcessing && fileInputRef.current?.click()}
                         className={`border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-10 text-center transition-colors group ${isProcessing ? 'cursor-not-allowed' : 'cursor-pointer hover:border-cyan-500/50'}`}
@@ -180,7 +269,12 @@ const AudioTranscription: React.FC = () => {
                                 disabled={isProcessing}
                                 className="w-full py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-400 text-white rounded-xl font-bold transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2"
                             >
-                                {processingStage === 'transcribing' ? (
+                                {processingStage === 'uploading' ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        正在壓縮音訊...
+                                    </>
+                                ) : processingStage === 'transcribing' ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
                                         AI 正在轉寫初稿...
@@ -215,7 +309,7 @@ const AudioTranscription: React.FC = () => {
                             <h2 className="text-xl font-bold text-slate-900 dark:text-white">{activeTranscript.title}</h2>
                         </div>
                         {(activeTranscript.content || activeTranscript.rawContent) && (
-                             <button
+                            <button
                                 onClick={() => handleDownload(activeTranscript)}
                                 className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-bold transition-colors"
                             >
@@ -232,7 +326,7 @@ const AudioTranscription: React.FC = () => {
                             </p>
                         )}
                         {(activeTranscript.keywords || activeTranscript.content) && <div className="h-px bg-slate-100 dark:bg-slate-800 mb-6"></div>}
-                        
+
                         <div className="prose dark:prose-invert max-w-none">
                             {(activeTranscript.content || activeTranscript.rawContent || '').split('\n').map((para, i) => (
                                 <p key={i} className="text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
@@ -264,9 +358,9 @@ const AudioTranscription: React.FC = () => {
                             </button>
                         </div>
                     )}
-                     {processingStage === 'done' && activeTranscript.content && (
+                    {processingStage === 'done' && activeTranscript.content && (
                         <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 text-center">
-                             <button onClick={handleReset} className="py-2 px-6 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-bold transition-colors">
+                            <button onClick={handleReset} className="py-2 px-6 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-bold transition-colors">
                                 處理新錄音
                             </button>
                         </div>

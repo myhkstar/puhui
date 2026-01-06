@@ -71,15 +71,14 @@ export const research = async (req, res) => {
       [A highly detailed image generation prompt describing the visual composition, colors, and layout. The layout should be optimized for a ${aspectRatio} aspect ratio. END the prompt with this exact sentence: "All text, labels, and titles inside the image must be written in ${language}."]
     `;
 
-        const response = await genAI.models.generateContent({
+        const model = genAI.getGenerativeModel({
             model: TEXT_MODEL,
-            contents: systemPrompt,
-            config: {
-                tools: [{ googleSearch: {} }],
-            },
+            tools: [{ googleSearch: {} }],
         });
 
-        const text = response.text || "";
+        const result = await model.generateContent(systemPrompt);
+        const response = await result.response;
+        const text = response.text() || "";
         const usage = response.usageMetadata?.totalTokenCount || 0;
 
         const factsMatch = text.match(/FACTS:\s*([\s\S]*?)(?=IMAGE_PROMPT:|$)/i);
@@ -125,14 +124,15 @@ export const generateImage = async (req, res) => {
     if (!genAI) return res.status(503).json({ message: 'AI service is not available.' });
     const { prompt, aspectRatio } = req.body;
     try {
-        const response = await genAI.models.generateContent({
-            model: IMAGE_MODEL,
-            contents: { parts: [{ text: prompt }] },
-            config: {
+        const model = genAI.getGenerativeModel({ model: IMAGE_MODEL });
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
                 responseModalities: [Modality.IMAGE],
                 imageConfig: { aspectRatio: aspectRatio },
             }
         });
+        const response = await result.response;
         const usage = response.usageMetadata?.totalTokenCount || 0;
         const part = response.candidates?.[0]?.content?.parts?.[0];
         if (part && part.inlineData && part.inlineData.data) {
@@ -154,18 +154,20 @@ export const editImage = async (req, res) => {
     const { currentImageInput, editInstruction } = req.body;
     try {
         const cleanBase64 = currentImageInput.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
-        const response = await genAI.models.generateContent({
-            model: EDIT_MODEL,
-            contents: {
+        const model = genAI.getGenerativeModel({ model: EDIT_MODEL });
+        const result = await model.generateContent({
+            contents: [{
+                role: 'user',
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
                     { text: editInstruction }
                 ]
-            },
-            config: {
+            }],
+            generationConfig: {
                 responseModalities: [Modality.IMAGE],
             }
         });
+        const response = await result.response;
         const usage = response.usageMetadata?.totalTokenCount || 0;
         const part = response.candidates?.[0]?.content?.parts?.[0];
         if (part && part.inlineData && part.inlineData.data) {
@@ -193,10 +195,11 @@ export const generateSimpleImage = async (req, res) => {
                 inlineData: { mimeType: 'image/png', data: clean }
             });
         }
-        const response = await genAI.models.generateContent({
-            model: SIMPLE_IMAGE_MODEL,
-            contents: { parts: parts },
+        const model = genAI.getGenerativeModel({ model: SIMPLE_IMAGE_MODEL });
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: parts }],
         });
+        const response = await result.response;
         const usage = response.usageMetadata?.totalTokenCount || 0;
         const partsOut = response.candidates?.[0]?.content?.parts;
         if (partsOut) {
@@ -259,14 +262,15 @@ export const chat = async (req, res) => {
             };
         }
 
-        const chat = genAI.chats.create({
+        const model = genAI.getGenerativeModel({
             model: modelName,
+            systemInstruction,
+            tools: tools.length > 0 ? tools : undefined,
+            toolConfig: Object.keys(toolConfig).length > 0 ? toolConfig : undefined,
+        });
+
+        const chat = model.startChat({
             history: formattedHistory,
-            config: {
-                systemInstruction,
-                tools: tools.length > 0 ? tools : undefined,
-                toolConfig: Object.keys(toolConfig).length > 0 ? toolConfig : undefined,
-            }
         });
 
         const parts = [{ text: newMessage }];
@@ -325,11 +329,10 @@ export const generateTitle = async (req, res) => {
     const { text } = req.body;
     try {
         const systemPrompt = `You are a title generator. Your task is to create a very short, concise, and descriptive title (max 5 words, in the same language as the input) for the following user message. Do not add quotes or any other formatting.`;
-        const response = await genAI.models.generateContent({
-            model: 'gemini-2.0-flash',
-            contents: `${systemPrompt}\n\nUser Message: "${text}"\n\nTitle:`,
-        });
-        const title = response.text?.trim().replace(/"/g, '') || text.substring(0, 20);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const result = await model.generateContent(`${systemPrompt}\n\nUser Message: "${text}"\n\nTitle:`);
+        const response = await result.response;
+        const title = response.text()?.trim().replace(/"/g, '') || text.substring(0, 20);
         res.json({ title });
     } catch (error) {
         console.error('Gemini title generation error:', error);
@@ -342,18 +345,20 @@ export const beautifyImage = async (req, res) => {
     const { image, prompt } = req.body;
     try {
         const cleanBase64 = image.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
-        const response = await genAI.models.generateContent({
-            model: EDIT_MODEL,
-            contents: {
+        const model = genAI.getGenerativeModel({ model: EDIT_MODEL });
+        const result = await model.generateContent({
+            contents: [{
+                role: 'user',
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
                     { text: prompt }
                 ]
-            },
-            config: {
+            }],
+            generationConfig: {
                 responseModalities: [Modality.IMAGE],
             }
         });
+        const response = await result.response;
         const usage = response.usageMetadata?.totalTokenCount || 0;
         const part = response.candidates?.[0]?.content?.parts?.[0];
         if (part && part.inlineData && part.inlineData.data) {
@@ -381,17 +386,18 @@ export const analyzeImage = async (req, res) => {
         - "other": If it's a landscape, abstract art, or doesn't fit the above.
         Return ONLY the category name in lowercase.`;
 
-        const response = await genAI.models.generateContent({
-            model: 'gemini-2.0-flash',
-            contents: {
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const result = await model.generateContent({
+            contents: [{
+                role: 'user',
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } },
                     { text: prompt }
                 ]
-            }
+            }]
         });
-
-        const category = response.text?.trim().toLowerCase() || 'other';
+        const response = await result.response;
+        const category = response.text()?.trim().toLowerCase() || 'other';
         res.json({ category });
     } catch (error) {
         console.error('Gemini image analysis error:', error);
