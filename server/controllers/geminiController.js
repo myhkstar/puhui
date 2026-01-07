@@ -256,7 +256,7 @@ export const chat = async (req, res) => {
     // Set headers for SSE
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Prevent buffering by Nginx/Proxies
 
     // Send initial keep-alive ping
     res.write(`data: ${JSON.stringify({ keepAlive: true })}\n\n`);
