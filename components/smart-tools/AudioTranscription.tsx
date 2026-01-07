@@ -221,7 +221,7 @@ const AudioTranscription: React.FC = () => {
                     錄音整理 (Recording Organizer)
                 </h1>
                 <p className="text-slate-500 dark:text-slate-400 text-sm">
-                    上傳 1-5 個錄音檔案，AI 將為您轉寫初稿，並可按需進行整理或書面化。
+                    上傳錄音檔案，AI 將為您轉寫初稿，並可進一步進行去噪、書面化、糾錯及潤色處理。
                 </p>
             </div>
 
@@ -346,15 +346,21 @@ const AudioTranscription: React.FC = () => {
 
                     {processingStage === 'done' && !activeTranscript.content && (
                         <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row gap-4">
-                            <button onClick={() => handleRefine('organize')} className="flex-1 flex flex-col items-center justify-center p-4 bg-cyan-50 dark:bg-cyan-900/30 hover:bg-cyan-100 dark:hover:bg-cyan-900/50 rounded-lg transition-colors text-cyan-800 dark:text-cyan-200">
-                                <Wand2 className="w-6 h-6 mb-2" />
-                                <span className="font-bold">AI 整理</span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">盡量忠實原文，保留口語</span>
+                            <button
+                                onClick={() => handleDownload(activeTranscript)}
+                                className="flex-1 flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors text-slate-700 dark:text-slate-200"
+                            >
+                                <Download className="w-6 h-6 mb-2" />
+                                <span className="font-bold">下載文稿</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">保存初步轉寫結果</span>
                             </button>
-                            <button onClick={() => handleRefine('formalize')} className="flex-1 flex flex-col items-center justify-center p-4 bg-cyan-50 dark:bg-cyan-900/30 hover:bg-cyan-100 dark:hover:bg-cyan-900/50 rounded-lg transition-colors text-cyan-800 dark:text-cyan-200">
-                                <BookText className="w-6 h-6 mb-2" />
-                                <span className="font-bold">AI 書面化</span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">保留原意的基礎上盡量書面化</span>
+                            <button
+                                onClick={() => handleRefine('organize')}
+                                className="flex-1 flex flex-col items-center justify-center p-4 bg-cyan-600 hover:bg-cyan-700 rounded-xl transition-colors text-white shadow-lg shadow-cyan-500/20"
+                            >
+                                <Wand2 className="w-6 h-6 mb-2" />
+                                <span className="font-bold">繼續整理</span>
+                                <span className="text-xs text-cyan-100 mt-1">去噪、書面化、糾錯及潤色</span>
                             </button>
                         </div>
                     )}

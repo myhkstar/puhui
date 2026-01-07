@@ -63,14 +63,12 @@ export const processAudio = async (req, res) => {
         await waitForFilesActive(uploadedFiles);
 
         // 3. Prepare prompt and parts
-        const prompt = `你是一個專業的錄音整理專家。請對提供的錄音內容進行文字提取，並按照以下要求輸出：
+        const prompt = `你是一個專業的錄音轉寫專家。請對提供的錄音內容進行初步文字識別，並按照以下要求輸出：
 
-1. **關鍵詞提取**：在文稿的最前面，提煉出4-5個核心關鍵詞，每個關鍵詞前加上'#'號，並用空格分隔。例如：#關鍵詞一 #關鍵詞二 #關鍵詞三
-2. **內容結構**：關鍵詞獨佔一行，其後空一行，然後開始正文。
-3. **講者識別**：請識別不同的講者，並在每一段發言前標註講者（例如：Speaker 1, Speaker 2...）。
-4. **逐字稿**：請輸出包含講者標註的逐字稿，盡量保留原意。
+1. **講者識別**：請識別不同的講者，並在每一段發言前標註講者（例如：講者 1, 講者 2...）。
+2. **逐字稿**：請輸出包含講者標註的逐字稿，盡量保留原意，不要進行任何刪減或潤色。
 
-請直接輸出最終文稿，不要包含任何額外的解釋。`;
+請直接輸出轉寫結果，不要包含任何額外的解釋。`;
 
         const parts = [
             { text: prompt },
@@ -96,10 +94,7 @@ export const processAudio = async (req, res) => {
         }
 
         // 5. Finalize and Save to DB
-        const lines = fullText.split('\n');
-        const keywordsLine = lines[0]?.startsWith('#') ? lines[0] : '';
-        const contentStartIndex = keywordsLine ? (lines[1]?.trim() === '' ? 2 : 1) : 0;
-        const content = lines.slice(contentStartIndex).join('\n').trim();
+        const content = fullText.trim();
 
         const transcriptId = uuidv4();
         const createdAt = Date.now();
@@ -108,14 +103,14 @@ export const processAudio = async (req, res) => {
         await pool.query(`
             INSERT INTO transcripts (id, user_id, title, content, original_content, keywords, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [transcriptId, req.user.id, title, content, content, keywordsLine, createdAt]);
+        `, [transcriptId, req.user.id, title, content, content, '', createdAt]);
 
         // Send metadata at the end
         res.write(`data: ${JSON.stringify({
             done: true,
             id: transcriptId,
             title,
-            keywords: keywordsLine,
+            keywords: '',
             content,
             createdAt
         })}\n\n`);
@@ -177,23 +172,12 @@ export const refineTranscript = async (req, res) => {
 
         let prompt = "";
         if (refinementType === 'organize') {
-            prompt = `你是一位專業的文案整理專家。請對以下錄音逐字稿進行「AI整理」，要求如下：
-1. **刪除冗詞**：刪除重複、多餘、囉嗦的字詞以及無意義的語氣停頓詞（如「嗯」、「啊」等），確保文稿通順、流暢。
-2. **修正與標註**：如果原文中有明顯的口誤或事實性錯誤，可以直接改正，但必須在改正處後面用括號註明改動，例如：「我們去了北京（原文為上海）」。
-3. **語音修正**：對一些發音不清或帶有方言口音的地方根據語境進行修正。
-4. **忠於原文**：除了上述必要的精簡、潤色和修正，不要擅自增加或刪減核心內容，不要歸納總結。
-5. **段落劃分**：根據內容的邏輯關係進行適當的段落劃分，但不要使用清單式的小標題。
-6. **保留講者**：如果原文有講者標註，請盡量保留或合理整合。
-
-原始文本：
-${originalText}`;
-        } else if (refinementType === 'formalize') {
-            prompt = `你是一位專業的文案整理專家。請對以下錄音逐字稿進行「AI書面化」，要求如下：
-1. **基於整理**：首先執行「AI整理」的所有步驟（刪除冗詞、修正口誤等）。
-2. **書面化轉換**：在保留原意的基礎上，把一些過於口語化的內容轉成書面語或正式用語。
-3. **標註轉換**：必須在轉換處後面用括號標註，例如：「這事兒挺靠譜的（原文：這事兒倍兒棒）」。
-4. **忠於原文**：不要擅自增加或刪減核心內容，不要歸納總結。
-5. **段落劃分**：根據內容的邏輯關係進行適當的段落劃分。
+            prompt = `你是一位專業的文案整理專家。請對以下錄音逐字稿進行深度整理，要求如下：
+1. **去噪**：刪除「嗯、啊、那個、就是、然後」等無意義的口癖和冗餘詞彙。
+2. **書面化**：在不改變原意的基礎上，將口語轉化為正式用語或書面語。
+3. **糾錯**：識別並標註可能的語音識別錯誤（例如：用括號註明原文，如「我們去了北京（原文：背景）」）。
+4. **語言潤色**：使語言通順、專業且易於閱讀，優化句式結構，但絕對不要改變用戶的原意。
+5. **自動標題**：在文稿的最開頭提供一個簡短有力、概括全文的標題，標題後換行並空一行。
 
 原始文本：
 ${originalText}`;
