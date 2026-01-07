@@ -221,7 +221,7 @@ export const generateSimpleImage = async (req, res) => {
 
 export const chat = async (req, res) => {
     if (!genAI) return res.status(503).json({ message: 'AI service is not available.' });
-    const { history, newMessage, modelName, attachments, isSearchEnabled } = req.body;
+    const { history, newMessage, modelName, attachments, isSearchEnabled, specialAssistant } = req.body;
 
     // Set headers for SSE
     res.setHeader('Content-Type', 'text/event-stream');
@@ -229,35 +229,36 @@ export const chat = async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
 
     try {
-        const systemInstruction = `
+        let systemInstruction = `
     你是一個溫暖、耐心、對初學者極度友好的通用型 AI 助手，名字叫「普普」。你的主要目標是讓不懂 AI 的人也能輕鬆愉快地和你聊天、解決問題，並慢慢喜歡上使用 AI。
     請永遠遵守以下原則：
     3.5.1. 用戶使用什麽語言/文字問你，你就用什麽語言/文字回答，除非用戶指定你用什麽語言思考、用什麽語言回答。比如，用戶用簡體中文和你聊天，你也要用簡體中文回復；如果用戶是中英文夾雜，你也可以試著用這樣的方式聊天。
     3.5.2. 絕對不要丟出一堆技術細節嚇人，除非用戶主動說「我想知道更深入的」。
-    3.5.3. 回答要像一個熱情又不煩人的鄰家姐姐/哥哥一樣，語氣親切、帶一點鼓勵和幽默。
+    3.5.3. 如果你使用了 Google 搜索工具，請務必在回答中整合搜索到的信息，並確保信息的準確性。
     3.5.4 每當用戶成功完成一件事（不管多小），都要真心誇獎他，例如「哇！你剛剛那個問題問得超棒！」「第一次用就這麼厲害，我好驕傲喔～」
     3.5.5 如果用戶卡住了，要主動提供超詳細、一步一步的指引（一步一步用編號），並在每一步結束後問「這一步你完成了嗎？卡在哪里我陪你一起解決！」
-    3.5.6 允許用戶用任何方式表達（打字亂、錯字、語句不完整、方言都 OK），你要能完全理解並用標準但溫柔的語氣回應。
-    3.5.7 當用戶表達挫折、害怕或對 AI 有疑慮時，先共情再安慰，例如「我知道一開始用 AI 會覺得怪怪的，我當初也被嚇到呢！其實我就是個超級聽話的聊天夥伴而已啦～」
-    3.5.8 結尾經常加一點溫暖的結語，例如「有什麼問題隨時呼喚我喔！我一直在這裡陪你～」「今天又學到新東西了，真開心能陪著你！」
-    3.5.9 如果你使用了 Google 搜索工具，請務必在回答中整合搜索到的信息，並確保信息的準確性。
+    3.5.6 當用戶表達挫折、害怕或對 AI 有疑慮時，先共情再安慰，例如「我知道一開始用 AI 會覺得怪怪的，我當初也被嚇到呢！其實我就是個超級聽話的聊天夥伴而已啦～」
+    3.5.7 結尾經常加一點溫暖的結語，例如「有什麼問題隨時呼喚我喔！我一直在這裡陪你～」「今天又學到新東西了，真開心能陪著你！」
     記住：你不是在教課，你是在交朋友的同時，順便幫忙解決問題。
     讓每一次對話都讓用戶覺得「原來 AI 這麼好玩、這麼簡單！」
     `;
+
+        // If a special assistant is selected, use its prompt instead
+        if (specialAssistant && specialAssistant.prompt) {
+            systemInstruction = specialAssistant.prompt;
+        }
         const formattedHistory = history.map(h => ({
             role: h.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: h.content }]
         }));
 
         const tools = [];
-        const toolConfig = {};
-
         if (isSearchEnabled) {
             tools.push({
                 google_search_retrieval: {
                     dynamic_retrieval_config: {
-                        mode: "DYNAMIC",
-                        dynamic_threshold: 0.7,
+                        mode: "MODE_DYNAMIC",
+                        dynamic_threshold: 0.3,
                     }
                 }
             });
@@ -267,7 +268,6 @@ export const chat = async (req, res) => {
             model: modelName,
             systemInstruction,
             tools: tools.length > 0 ? tools : undefined,
-            toolConfig: Object.keys(toolConfig).length > 0 ? toolConfig : undefined,
         });
 
         const chat = model.startChat({
