@@ -253,13 +253,14 @@ export const chat = async (req, res) => {
         const toolConfig = {};
 
         if (isSearchEnabled) {
-            tools.push({ googleSearch: {} });
-            toolConfig.googleSearchRetrieval = {
-                dynamicRetrievalConfig: {
-                    mode: "DYNAMIC",
-                    dynamicThreshold: 0.7,
+            tools.push({
+                google_search_retrieval: {
+                    dynamic_retrieval_config: {
+                        mode: "DYNAMIC",
+                        dynamic_threshold: 0.7,
+                    }
                 }
-            };
+            });
         }
 
         const model = genAI.getGenerativeModel({
