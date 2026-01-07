@@ -3,9 +3,18 @@ import multer from 'multer';
 import * as transcriptController from '../controllers/transcriptController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
+import os from 'os';
+
 const router = express.Router();
 const upload = multer({
-    storage: multer.memoryStorage(),
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, os.tmpdir());
+        },
+        filename: (req, file, cb) => {
+            cb(null, `upload_${Date.now()}_${file.originalname}`);
+        }
+    }),
     limits: {
         fileSize: 200 * 1024 * 1024, // 200MB limit per file
     }

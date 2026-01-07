@@ -45,14 +45,13 @@ export const processAudio = async (req, res) => {
     const uploadedFiles = [];
 
     try {
-        // 1. Save to temp and Upload to File API
+        // 1. Upload to Gemini File API
         for (const file of files) {
-            const tempPath = path.join(os.tmpdir(), `upload_${uuidv4()}_${file.originalname}`);
-            await fs.writeFile(tempPath, file.buffer);
-            tempFiles.push(tempPath);
+            const filePath = file.path;
+            tempFiles.push(filePath); // For cleanup later
 
             console.log(`[Transcript] Uploading ${file.originalname} to Gemini File API...`);
-            const uploadResult = await fileManager.uploadFile(tempPath, {
+            const uploadResult = await fileManager.uploadFile(filePath, {
                 mimeType: file.mimetype,
                 displayName: file.originalname,
             });

@@ -19,8 +19,8 @@ const compressAudio = async (file: File): Promise<File> => {
         const arrayBuffer = await file.arrayBuffer();
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-        // Target: 16kHz, Mono
-        const targetSampleRate = 16000;
+        // Target: 8kHz, Mono
+        const targetSampleRate = 8000;
         const offlineCtx = new OfflineAudioContext(
             1,
             Math.ceil(audioBuffer.duration * targetSampleRate),
@@ -43,7 +43,7 @@ const compressAudio = async (file: File): Promise<File> => {
 
 function bufferToWav(abuffer: AudioBuffer) {
     let numOfChan = abuffer.numberOfChannels,
-        length = abuffer.length * numOfChan * 2 + 44,
+        length = abuffer.length * numOfChan * 1 + 44, // 1 byte per sample for 8-bit
         buffer = new ArrayBuffer(length),
         view = new DataView(buffer),
         channels = [], i, sample,
@@ -55,17 +55,18 @@ function bufferToWav(abuffer: AudioBuffer) {
 
     setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
     setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
-    setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan);
-    setUint16(numOfChan * 2); setUint16(16);
+    setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 1 * numOfChan);
+    setUint16(numOfChan * 1); setUint16(8); // 8-bit
     setUint32(0x61746164); setUint32(length - pos - 4);
 
     for (i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
     while (pos < length) {
         for (i = 0; i < numOfChan; i++) {
             sample = Math.max(-1, Math.min(1, channels[i][offset]));
-            sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF);
-            view.setInt16(pos, sample, true);
-            pos += 2;
+            // 8-bit PCM is unsigned: 0 to 255, 128 is middle
+            let s8 = Math.round((sample + 1) * 127.5);
+            view.setUint8(pos, s8);
+            pos += 1;
         }
         offset++;
     }

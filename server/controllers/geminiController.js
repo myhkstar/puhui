@@ -280,12 +280,12 @@ export const chat = async (req, res) => {
             }
         }
 
-        const result = await chat.sendMessageStream({ message: parts });
+        const result = await chat.sendMessageStream(parts);
 
         let aggregatedGroundingMetadata = null;
 
-        for await (const chunk of result) {
-            const chunkText = chunk.text; // Changed from .text() to .text
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
             if (chunkText) {
                 res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
             }
