@@ -256,7 +256,7 @@ export const chat = async (req, res) => {
             tools.push({ googleSearch: {} });
             toolConfig.googleSearchRetrieval = {
                 dynamicRetrievalConfig: {
-                    mode: "MODE_DYNAMIC",
+                    mode: "DYNAMIC",
                     dynamicThreshold: 0.7,
                 }
             };
