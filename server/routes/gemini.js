@@ -1,5 +1,8 @@
+import express from 'express';
 import multer from 'multer';
 import os from 'os';
+import * as geminiController from '../controllers/geminiController.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 const upload = multer({
