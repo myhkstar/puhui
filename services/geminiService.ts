@@ -51,14 +51,36 @@ export const generateSimpleImage = async (prompt: string, images: string[], toke
 };
 
 // Helper for streaming
-async function* streamRequest(endpoint: string, body: any, token: string) {
+async function* streamRequest(endpoint: string, body: any, token: string, files?: File[]) {
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${token}`
+  };
+
+  let requestBody: any;
+
+  if (files && files.length > 0) {
+    // Use FormData for multipart uploads (Audio/Video/etc.)
+    const formData = new FormData();
+    // Append all fields from body
+    Object.keys(body).forEach(key => {
+      if (body[key] !== undefined) {
+        formData.append(key, typeof body[key] === 'object' ? JSON.stringify(body[key]) : body[key]);
+      }
+    });
+    // Append files
+    files.forEach(file => formData.append('files', file));
+    requestBody = formData;
+    // Note: Fetch will automatically set the correct Content-Type with boundary for FormData
+  } else {
+    // Use JSON for standard requests
+    headers['Content-Type'] = 'application/json';
+    requestBody = JSON.stringify(body);
+  }
+
   const response = await fetch(`/api/gemini/${endpoint}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(body),
+    headers,
+    body: requestBody,
   });
 
   if (!response.ok) {
@@ -100,9 +122,12 @@ export const chatWithGemini = async function* (
   token: string,
   thinkingLevel: string,
   isSearchEnabled: boolean,
-  attachments?: { mimeType: string, data: string }[]
+  attachments?: { mimeType: string, data: string }[],
+  files?: File[],
+  specialAssistant?: any
 ) {
-  const generator = streamRequest('chat', { history, newMessage, modelName, thinkingLevel, isSearchEnabled, attachments }, token);
+  const body = { history, newMessage, modelName, thinkingLevel, isSearchEnabled, attachments, specialAssistant };
+  const generator = streamRequest('chat', body, token, files);
   for await (const chunk of generator) {
     yield chunk;
   }

@@ -18,7 +18,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
     const [editingTitle, setEditingTitle] = useState('');
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
-    const [attachments, setAttachments] = useState<{ name: string, data: string, mimeType: string }[]>([]);
+    const [attachments, setAttachments] = useState<{ name: string, data?: string, mimeType: string, file?: File }[]>([]);
     const [loading, setLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [chatMode, setChatMode] = useState<'light' | 'deep'>('light');
@@ -133,18 +133,28 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                 return;
             }
 
-            files.forEach((file: File) => { // Explicitly cast file to File
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const base64 = reader.result as string;
-                    const data = base64.split(',')[1];
+            files.forEach((file: File) => {
+                if (file.type.startsWith('image/')) {
+                    // Images still use Base64 for inline preview/legacy support
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64 = reader.result as string;
+                        const data = base64.split(',')[1];
+                        setAttachments(prev => [...prev, {
+                            name: file.name,
+                            data: data,
+                            mimeType: file.type
+                        }]);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    // Audio/Video/PDF etc. use File API (stored as File object)
                     setAttachments(prev => [...prev, {
                         name: file.name,
-                        data: data,
-                        mimeType: file.type
+                        mimeType: file.type,
+                        file: file
                     }]);
-                };
-                reader.readAsDataURL(file);
+                }
             });
         }
     };
@@ -250,6 +260,15 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
             const modelMsgId = Date.now() + 1;
             setMessages(prev => [...prev, { role: 'model', content: "", timestamp: modelMsgId }]);
 
+            // Separate Base64 attachments (images) from File objects (media)
+            const base64Attachments = currentAttachments
+                .filter(a => a.data)
+                .map(a => ({ name: a.name, data: a.data!, mimeType: a.mimeType }));
+
+            const mediaFiles = currentAttachments
+                .filter(a => a.file)
+                .map(a => a.file!);
+
             const generator = chatWithGemini(
                 context,
                 promptText,
@@ -257,7 +276,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                 currentUser.token,
                 thinkingLevel,
                 isSearchEnabled,
-                currentAttachments
+                base64Attachments,
+                mediaFiles,
+                selectedSpecialAssistant
             );
 
             let accumulatedContent = "";
@@ -515,7 +536,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ user: currentUser }) => {
                     <form onSubmit={handleSend} className="flex gap-2">
                         <label className={`p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors text-slate-500 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
                             <Paperclip className="w-5 h-5" />
-                            <input type="file" onChange={handleFile} className="hidden" accept="image/*,.pdf,.txt,.doc,.docx" disabled={loading} multiple />
+                            <input type="file" onChange={handleFile} className="hidden" accept="image/*,audio/*,video/*,.pdf,.txt,.doc,.docx" disabled={loading} multiple />
                         </label>
                         <input
                             type="text"

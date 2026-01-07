@@ -1,5 +1,5 @@
-import { Modality } from '@google/genai';
-import { genAI } from '../config/gemini.js';
+import { genAI, fileManager } from '../config/gemini.js';
+import fs from 'fs/promises';
 
 const TEXT_MODEL = 'gemini-3-pro-preview';
 const IMAGE_MODEL = 'gemini-3-pro-image-preview';
@@ -219,9 +219,35 @@ export const generateSimpleImage = async (req, res) => {
     }
 };
 
+async function waitForFilesActive(files) {
+    for (const file of files) {
+        let fileStatus = await fileManager.getFile(file.name);
+        while (fileStatus.state === "PROCESSING") {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            fileStatus = await fileManager.getFile(file.name);
+        }
+        if (fileStatus.state !== "ACTIVE") {
+            throw new Error(`File ${file.name} failed to process: ${fileStatus.state}`);
+        }
+    }
+}
+
 export const chat = async (req, res) => {
     if (!genAI) return res.status(503).json({ message: 'AI service is not available.' });
-    const { history, newMessage, modelName, attachments, isSearchEnabled, specialAssistant } = req.body;
+    let { history, newMessage, modelName, attachments, isSearchEnabled, specialAssistant } = req.body;
+
+    // Parse JSON strings if they come from FormData (multer)
+    try {
+        if (typeof history === 'string') history = JSON.parse(history);
+        if (typeof attachments === 'string') attachments = JSON.parse(attachments);
+        if (typeof specialAssistant === 'string') specialAssistant = JSON.parse(specialAssistant);
+        if (typeof isSearchEnabled === 'string') isSearchEnabled = isSearchEnabled === 'true';
+    } catch (e) {
+        console.error("[Chat] Error parsing request body:", e);
+    }
+
+    history = history || [];
+    attachments = attachments || [];
 
     // Set headers for SSE
     res.setHeader('Content-Type', 'text/event-stream');
@@ -275,6 +301,34 @@ export const chat = async (req, res) => {
         });
 
         const parts = [{ text: newMessage }];
+        const uploadedFiles = [];
+        const tempFiles = [];
+
+        // Handle multipart files (Audio/Video)
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                console.log(`[Chat] Uploading ${file.originalname} to Gemini File API...`);
+                const uploadResult = await fileManager.uploadFile(file.path, {
+                    mimeType: file.mimetype,
+                    displayName: file.originalname,
+                });
+                uploadedFiles.push(uploadResult.file);
+                tempFiles.push(file.path);
+            }
+            // Wait for media files to be processed
+            await waitForFilesActive(uploadedFiles);
+
+            for (const file of uploadedFiles) {
+                parts.push({
+                    fileData: {
+                        mimeType: file.mimeType,
+                        fileUri: file.uri
+                    }
+                });
+            }
+        }
+
+        // Handle Base64 attachments (Images/Legacy)
         if (attachments && attachments.length > 0) {
             for (const file of attachments) {
                 parts.push({ inlineData: { mimeType: file.mimeType, data: file.data } });
@@ -320,8 +374,15 @@ export const chat = async (req, res) => {
 
     } catch (error) {
         console.error('Gemini chat error:', error);
-        res.write(`data: ${JSON.stringify({ error: 'An error occurred during the chat session.' })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
         res.end();
+    } finally {
+        // Cleanup temp files from multer
+        if (req.files) {
+            for (const file of req.files) {
+                try { await fs.unlink(file.path); } catch (e) { }
+            }
+        }
     }
 };
 
