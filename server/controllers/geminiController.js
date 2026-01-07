@@ -219,11 +219,15 @@ export const generateSimpleImage = async (req, res) => {
     }
 };
 
-async function waitForFilesActive(files) {
+async function waitForFilesActive(files, res) {
     for (const file of files) {
         let fileStatus = await fileManager.getFile(file.name);
         while (fileStatus.state === "PROCESSING") {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            // Send a keep-alive ping to prevent proxy timeouts (e.g. Cloudflare 524)
+            if (res) {
+                res.write(`data: ${JSON.stringify({ keepAlive: true })}\n\n`);
+            }
+            await new Promise((resolve) => setTimeout(resolve, 5000));
             fileStatus = await fileManager.getFile(file.name);
         }
         if (fileStatus.state !== "ACTIVE") {
@@ -253,6 +257,9 @@ export const chat = async (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
+
+    // Send initial keep-alive ping
+    res.write(`data: ${JSON.stringify({ keepAlive: true })}\n\n`);
 
     try {
         let systemInstruction = `
@@ -315,8 +322,8 @@ export const chat = async (req, res) => {
                 uploadedFiles.push(uploadResult.file);
                 tempFiles.push(file.path);
             }
-            // Wait for media files to be processed
-            await waitForFilesActive(uploadedFiles);
+            // Wait for media files to be processed, passing res to send keep-alive pings
+            await waitForFilesActive(uploadedFiles, res);
 
             for (const file of uploadedFiles) {
                 parts.push({
